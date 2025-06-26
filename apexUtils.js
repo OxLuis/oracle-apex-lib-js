@@ -1667,7 +1667,10 @@ window.apexGridUtils = (function() {
         initialize: initialize,
         setNumericCellValueWithCommit: setNumericCellValueWithCommit,
         setSelectedNumericCellValueWithCommit: setSelectedNumericCellValueWithCommit,
-        setFirstNumericCellValueWithCommit: setFirstNumericCellValueWithCommit
+        setFirstNumericCellValueWithCommit: setFirstNumericCellValueWithCommit,
+        setearDatosIG: setearDatosIG,
+        setearDatosDirectos: setearDatosDirectos,
+        setearDatos: setearDatos
     };
 
     // Inicializar el módulo automáticamente
@@ -1923,3 +1926,223 @@ function setSelectedNumericCellValueWithCommit(gridStaticId, columnName, value, 
 function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, decimalPlaces = null, refresh = true) {
     return setNumericCellValueWithCommit(gridStaticId, columnName, 1, value, decimalPlaces, refresh);
 }
+
+    /**
+     * Setear datos en un Interactive Grid con configuración avanzada
+     * @param {object} configuracion - Configuración completa para setear datos
+     * @param {string} configuracion.regionId - ID de la región del Interactive Grid
+     * @param {array|object} configuracion.datos - Datos a insertar (opcional si se usa campoOrigen)
+     * @param {string} configuracion.campoOrigen - Campo de la página que contiene los datos JSON (opcional si se usa datos)
+     * @param {object} configuracion.mapeo - Mapeo personalizado de campos {campoDestino: campoOrigen}
+     * @param {function} configuracion.transformacion - Función para transformar cada registro antes de insertar
+     * @param {function} configuracion.filtro - Función para filtrar registros antes de insertar
+     * @param {boolean} configuracion.limpiarAntes - Si debe limpiar datos existentes (default: true)
+     * @param {boolean} configuracion.refrescar - Si debe refrescar la grilla (default: true)
+     * @param {boolean} configuracion.modoEdicion - Si debe habilitar modo edición (default: true)
+     * @param {function} configuracion.callback - Función a ejecutar después de setear datos
+     * @returns {object} - Objeto con resultado de la operación
+     */
+    function setearDatosIG(configuracion) {
+        console.log('apexGridUtils: Seteando datos en IG:', configuracion.regionId);
+        
+        try {
+            // Validar parámetros obligatorios
+            if (!configuracion.regionId) {
+                throw new Error('regionId es obligatorio');
+            }
+            
+            // Obtener el Interactive Grid
+            var ig$ = apex.region(configuracion.regionId).widget().interactiveGrid("getViews", "grid");
+            var model = ig$.model;
+            
+            // Habilitar modo edición si se especifica (por defecto true)
+            if (configuracion.modoEdicion !== false) {
+                try {
+                    // Habilitar edición en el modelo
+                    model.setOption("editable", true);
+                    // Activar modo edición en la grilla
+                    ig$.setEditMode(true);
+                    console.log('apexGridUtils: Modo edición habilitado para:', configuracion.regionId);
+                } catch (editError) {
+                    console.warn('apexGridUtils: No se pudo habilitar modo edición:', editError);
+                }
+            }
+            
+            // Obtener datos de origen
+            var datos = [];
+            
+            if (configuracion.datos) {
+                // Datos pasados directamente
+                datos = Array.isArray(configuracion.datos) ? configuracion.datos : [configuracion.datos];
+            } else if (configuracion.campoOrigen) {
+                // Datos desde un campo de la página
+                var valorCampo = apex.item(configuracion.campoOrigen).getValue();
+                if (valorCampo) {
+                    try {
+                        datos = JSON.parse(valorCampo);
+                    } catch (e) {
+                        throw new Error('Error al parsear JSON del campo: ' + configuracion.campoOrigen);
+                    }
+                }
+            } else {
+                throw new Error('Debe especificar datos o campoOrigen');
+            }
+            
+            // Validar que datos sea un array
+            if (!Array.isArray(datos)) {
+                datos = [datos];
+            }
+            
+            // Función auxiliar para normalizar nombres de campos
+            function normalizarCampo(campo) {
+                return campo.toUpperCase();
+            }
+            
+            // Función auxiliar para mapear campos
+            function mapearCampos(registro, mapeo) {
+                var registroMapeado = {};
+                
+                if (mapeo && typeof mapeo === 'object') {
+                    // Usar mapeo personalizado
+                    Object.keys(mapeo).forEach(function(clave) {
+                        var campoOrigen = mapeo[clave];
+                        var campoDestino = normalizarCampo(clave);
+                        
+                        if (registro.hasOwnProperty(campoOrigen)) {
+                            registroMapeado[campoDestino] = registro[campoOrigen];
+                        }
+                    });
+                } else {
+                    // Mapeo automático - convertir todas las claves a mayúsculas
+                    Object.keys(registro).forEach(function(clave) {
+                        var campoDestino = normalizarCampo(clave);
+                        registroMapeado[campoDestino] = registro[clave];
+                    });
+                }
+                
+                return registroMapeado;
+            }
+            
+            // Limpiar datos existentes si se especifica
+            if (configuracion.limpiarAntes !== false) {
+                model.clearData();
+            }
+            
+            // Contador de registros procesados
+            var registrosProcesados = 0;
+            var registrosConErrores = 0;
+            
+            // Insertar cada registro
+            datos.forEach(function(registro, indice) {
+                try {
+                    // Aplicar transformación personalizada si existe
+                    if (configuracion.transformacion && typeof configuracion.transformacion === 'function') {
+                        registro = configuracion.transformacion(registro, indice);
+                    }
+                    
+                    // Filtrar registro si existe condición
+                    if (configuracion.filtro && typeof configuracion.filtro === 'function') {
+                        if (!configuracion.filtro(registro, indice)) {
+                            return; // Saltar este registro
+                        }
+                    }
+                    
+                    // Mapear campos
+                    var registroMapeado = mapearCampos(registro, configuracion.mapeo);
+                    
+                    // Insertar registro en el modelo
+                    model.insertNewRecord(registroMapeado);
+                    registrosProcesados++;
+                    
+                } catch (error) {
+                    console.error('apexGridUtils: Error al procesar registro', indice, ':', error);
+                    registrosConErrores++;
+                }
+            });
+            
+            console.log('apexGridUtils: Registros procesados:', registrosProcesados);
+            if (registrosConErrores > 0) {
+                console.warn('apexGridUtils: Registros con errores:', registrosConErrores);
+            }
+            
+            // Refrescar la grilla si se especifica (por defecto true)
+            if (configuracion.refrescar !== false) {
+                try {
+                    ig$.view$.grid('refresh');
+                    console.log('apexGridUtils: Grilla refrescada correctamente');
+                } catch (refreshError) {
+                    console.warn('apexGridUtils: No se pudo refrescar la grilla:', refreshError);
+                    // Intentar refresh de la región completa como alternativa
+                    try {
+                        apex.region(configuracion.regionId).refresh();
+                    } catch (regionRefreshError) {
+                        console.warn('apexGridUtils: No se pudo refrescar la región:', regionRefreshError);
+                    }
+                }
+            }
+            
+            // Ejecutar callback si existe
+            if (configuracion.callback && typeof configuracion.callback === 'function') {
+                configuracion.callback({
+                    procesados: registrosProcesados,
+                    errores: registrosConErrores,
+                    total: datos.length
+                });
+            }
+            
+            return {
+                success: true,
+                procesados: registrosProcesados,
+                errores: registrosConErrores,
+                total: datos.length
+            };
+            
+        } catch (error) {
+            console.error('apexGridUtils: Error al setear datos en IG:', error);
+            return {
+                success: false,
+                error: error.message,
+                procesados: 0,
+                errores: 0,
+                total: 0
+            };
+        }
+    }
+
+    /**
+     * Setear datos directamente en un Interactive Grid
+     * @param {string} regionId - ID de la región del Interactive Grid
+     * @param {array|object} datos - Datos a insertar
+     * @param {boolean} limpiar - Si debe limpiar datos existentes (default: true)
+     * @param {boolean} refrescar - Si debe refrescar la grilla (default: true)
+     * @param {boolean} modoEdicion - Si debe habilitar modo edición (default: true)
+     * @returns {object} - Objeto con resultado de la operación
+     */
+    function setearDatosDirectos(regionId, datos, limpiar = true, refrescar = true, modoEdicion = true) {
+        return setearDatosIG({
+            regionId: regionId,
+            datos: datos,
+            limpiarAntes: limpiar,
+            refrescar: refrescar,
+            modoEdicion: modoEdicion
+        });
+    }
+
+    /**
+     * Setear datos desde un campo de la página en un Interactive Grid
+     * @param {string} regionId - ID de la región del Interactive Grid
+     * @param {string} campoOrigen - Campo de la página que contiene los datos JSON
+     * @param {boolean} limpiar - Si debe limpiar datos existentes (default: true)
+     * @param {boolean} refrescar - Si debe refrescar la grilla (default: true)
+     * @param {boolean} modoEdicion - Si debe habilitar modo edición (default: true)
+     * @returns {object} - Objeto con resultado de la operación
+     */
+    function setearDatos(regionId, campoOrigen, limpiar = true, refrescar = true, modoEdicion = true) {
+        return setearDatosIG({
+            regionId: regionId,
+            campoOrigen: campoOrigen,
+            limpiarAntes: limpiar,
+            refrescar: refrescar,
+            modoEdicion: modoEdicion
+        });
+    }
