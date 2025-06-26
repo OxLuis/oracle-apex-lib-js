@@ -304,6 +304,46 @@ apexGridUtils.setupGridListener('mi_grid', function() {
 });
 ```
 
+#### sumColumnToItem(gridStaticId, columnName, targetItem, decimalPlaces, autoUpdate)
+
+Suma todos los valores de una columna específica del Interactive Grid y coloca el resultado en un item de APEX.
+
+```javascript
+// Configuración básica
+let config = apexGridUtils.sumColumnToItem('mi_grid', 'TOTAL', 'P1_SUMA_TOTAL', 2, true);
+
+// Configuración sin actualización automática
+let configManual = apexGridUtils.sumColumnToItem('mi_grid', 'PRECIO', 'P1_TOTAL_PRECIOS', 2, false);
+
+// Recalcular manualmente
+configManual.calculateSum();
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna a sumar
+- `targetItem` (string): ID del item de APEX donde colocar el resultado
+- `decimalPlaces` (number): Número de decimales para el resultado (default: 2)
+- `autoUpdate` (boolean): Si debe actualizar automáticamente cuando cambien los datos (default: true)
+
+**Retorna:** `object` - Objeto con configuración de la suma
+```javascript
+{
+    sum: 1500.50,                    // Suma actual
+    calculateSum: function(),        // Función para recalcular
+    gridStaticId: 'mi_grid',         // ID del grid
+    columnName: 'TOTAL',             // Nombre de la columna
+    targetItem: 'P1_SUMA_TOTAL'      // ID del item destino
+}
+```
+
+**Características:**
+- Suma solo valores numéricos válidos (ignora nulos, undefined, vacíos)
+- Maneja formato europeo automáticamente (preserva el formato original)
+- Actualización automática cuando cambian los datos del grid
+- Permite recálculo manual usando `config.calculateSum()`
+- Configura listeners para cambios en el modelo del grid
+
 ### Recálculos y Refrescos
 
 ```javascript
@@ -330,166 +370,190 @@ apexGridUtils.refreshGridAndRecalculate('mi_grid', {
 apexGridUtils.refreshAutoCalculation('mi_grid');
 ```
 
-### Configuraciones Específicas
+### Funciones de Refresco de Grid
 
-#### setupCantidadPorCosto
+#### refreshGrid(gridStaticId, refreshRegion)
 
-Configuración rápida para el caso más común: CANTIDAD × COSTO = TOTAL
-
-```javascript
-// Configuración automática con valores por defecto
-apexGridUtils.setupCantidadPorCosto('mi_grid');
-
-// Configuración personalizada
-apexGridUtils.setupCantidadPorCosto('mi_grid', 'QTY', 'PRICE', 'SUBTOTAL', 2);
-```
-
-#### ensureAutoCalculation
-
-Verifica y configura cálculos automáticos si no existen
+Refresca la vista del Interactive Grid de manera simple y eficiente.
 
 ```javascript
-// Verificar si existe configuración para TOTAL
-apexGridUtils.ensureAutoCalculation('mi_grid', 'TOTAL');
-```
+// Refrescar solo la vista del grid
+apexGridUtils.refreshGrid('mi_grid', false);
 
-### Gestión de Configuraciones
+// Refrescar vista del grid y región completa
+apexGridUtils.refreshGrid('mi_grid', true);
 
-```javascript
-// Obtener configuración específica
-let config = apexGridUtils.getAutoCalculationConfig('mi_grid', 'TOTAL');
-
-// Obtener todas las configuraciones del grid
-let todasConfigs = apexGridUtils.getAutoCalculationConfig('mi_grid');
-
-// Limpiar configuración específica
-apexGridUtils.clearAutoCalculationConfig('mi_grid', 'TOTAL');
-
-// Limpiar todas las configuraciones del grid
-apexGridUtils.clearAutoCalculationConfig('mi_grid');
-
-// Obtener todas las configuraciones almacenadas
-let todas = apexGridUtils.getAllAutoCalculationConfigs();
-```
-
-### Inserción de Datos
-
-#### setearDatosIG(configuracion)
-
-Inserta datos en un Interactive Grid con configuración avanzada.
-
-```javascript
-// Configuración básica con datos directos
-apexGridUtils.setearDatosIG({
-    regionId: 'mi_grid',
-    datos: [
-        { id: 1, nombre: 'Producto A', precio: 100 },
-        { id: 2, nombre: 'Producto B', precio: 200 }
-    ],
-    limpiarAntes: true,
-    refrescar: true,
-    modoEdicion: true
-});
-
-// Configuración con mapeo de campos
-apexGridUtils.setearDatosIG({
-    regionId: 'mi_grid',
-    datos: [
-        { codigo: 'A001', descripcion: 'Producto A', valor: 100 },
-        { codigo: 'A002', descripcion: 'Producto B', valor: 200 }
-    ],
-    mapeo: {
-        'ID': 'codigo',
-        'NOMBRE': 'descripcion',
-        'PRECIO': 'valor'
-    },
-    transformacion: function(registro, indice) {
-        // Agregar fecha de creación
-        registro.fecha_creacion = new Date().toISOString();
-        return registro;
-    },
-    filtro: function(registro, indice) {
-        // Solo insertar productos con valor > 50
-        return registro.valor > 50;
-    },
-    callback: function(resultado) {
-        console.log('Datos insertados:', resultado.procesados);
-    }
-});
-
-// Configuración con datos desde campo de página
-apexGridUtils.setearDatosIG({
-    regionId: 'mi_grid',
-    campoOrigen: 'P1_DATOS_JSON',
-    limpiarAntes: true,
-    refrescar: true
-});
+// Refrescar con configuración por defecto (incluye región)
+apexGridUtils.refreshGrid('mi_grid');
 ```
 
 **Parámetros:**
-- `configuracion.regionId` (string): ID de la región del Interactive Grid
-- `configuracion.datos` (array|object): Datos a insertar (opcional si se usa campoOrigen)
-- `configuracion.campoOrigen` (string): Campo de la página que contiene los datos JSON (opcional si se usa datos)
-- `configuracion.mapeo` (object): Mapeo personalizado de campos {campoDestino: campoOrigen}
-- `configuracion.transformacion` (function): Función para transformar cada registro antes de insertar
-- `configuracion.filtro` (function): Función para filtrar registros antes de insertar
-- `configuracion.limpiarAntes` (boolean): Si debe limpiar datos existentes (default: true)
-- `configuracion.refrescar` (boolean): Si debe refrescar la grilla (default: true)
-- `configuracion.modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
-- `configuracion.callback` (function): Función a ejecutar después de setear datos
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `refreshRegion` (boolean): Si debe refrescar también la región completa (default: true)
 
-**Retorna:** `object` - Objeto con resultado de la operación
+**Retorna:** `boolean` - true si se refrescó correctamente
+
+#### refreshGridAndRecalculateSimple(gridStaticId, targetColumn, delay)
+
+Refresca el grid y recalcula automáticamente las fórmulas configuradas.
+
 ```javascript
-{
-    success: true,
-    procesados: 5,
-    errores: 0,
-    total: 5
+// Refrescar grid y recalcular todas las columnas automáticas
+apexGridUtils.refreshGridAndRecalculateSimple('mi_grid');
+
+// Refrescar grid y recalcular columna específica
+apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 100);
+
+// Refrescar grid y recalcular con delay personalizado
+apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 200);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `targetColumn` (string): Columna específica a recalcular (opcional)
+- `delay` (number): Delay en milisegundos antes del recálculo (default: 100)
+
+**Retorna:** `boolean` - true si se ejecutó correctamente
+
+**Casos de Uso:**
+
+```javascript
+// Después de modificar valores programáticamente
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 150.50, false); // sin refresh automático
+apexGridUtils.refreshGrid('mi_grid'); // refrescar manualmente
+
+// Después de cambios masivos de datos
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    datos: nuevosDatos,
+    refrescar: false // no refrescar automáticamente
+});
+apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 150); // refrescar y recalcular
+
+// Para resolver problemas de sincronización
+function actualizarCostoYRecalcular() {
+    let nuevoCosto = calcularNuevoCosto();
+    apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, nuevoCosto, false);
+    
+    // Refrescar y recalcular con delay para asegurar sincronización
+    apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 100);
 }
 ```
 
-#### setearDatosDirectos(regionId, datos, limpiar, refrescar, modoEdicion)
+### Funciones de Confirmación de Cambios
 
-Versión simplificada para insertar datos directamente.
+#### commitGridChanges(gridStaticId, commitAll)
+
+Confirma los cambios en el modelo del grid sin refrescar la vista. Útil para guardar cambios sin perder datos.
 
 ```javascript
-// Insertar datos simples
-let datos = [
-    { ID: 1, NOMBRE: 'Producto A', PRECIO: 100 },
-    { ID: 2, NOMBRE: 'Producto B', PRECIO: 200 }
-];
+// Confirmar todos los cambios en el grid
+apexGridUtils.commitGridChanges('mi_grid', true);
 
-apexGridUtils.setearDatosDirectos('mi_grid', datos);
-
-// Insertar sin limpiar datos existentes
-apexGridUtils.setearDatosDirectos('mi_grid', datos, false, true, true);
+// Confirmar solo el registro seleccionado
+apexGridUtils.commitGridChanges('mi_grid', false);
 ```
 
 **Parámetros:**
-- `regionId` (string): ID de la región del Interactive Grid
-- `datos` (array|object): Datos a insertar
-- `limpiar` (boolean): Si debe limpiar datos existentes (default: true)
-- `refrescar` (boolean): Si debe refrescar la grilla (default: true)
-- `modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `commitAll` (boolean): Si debe confirmar todos los registros (default: true)
 
-#### setearDatos(regionId, campoOrigen, limpiar, refrescar, modoEdicion)
+**Retorna:** `boolean` - true si se confirmaron correctamente
 
-Inserta datos desde un campo de la página que contiene JSON.
+#### refreshGridViewOnly(gridStaticId, commitChanges)
+
+Refresca solo la vista del grid sin recargar los datos, confirmando cambios primero.
 
 ```javascript
-// Insertar desde campo P1_DATOS_JSON
-apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON');
+// Refrescar vista confirmando cambios primero
+apexGridUtils.refreshGridViewOnly('mi_grid', true);
 
-// Insertar sin limpiar y sin refrescar
-apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON', false, false, true);
+// Refrescar vista sin confirmar cambios
+apexGridUtils.refreshGridViewOnly('mi_grid', false);
 ```
 
 **Parámetros:**
-- `regionId` (string): ID de la región del Interactive Grid
-- `campoOrigen` (string): Campo de la página que contiene los datos JSON
-- `limpiar` (boolean): Si debe limpiar datos existentes (default: true)
-- `refrescar` (boolean): Si debe refrescar la grilla (default: true)
-- `modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `commitChanges` (boolean): Si debe confirmar cambios antes de refrescar (default: true)
+
+**Retorna:** `boolean` - true si se refrescó correctamente
+
+#### refreshGridSafe(gridStaticId, commitChanges, refreshRegion)
+
+Refresca el grid de manera segura, confirmando cambios y refrescando solo la vista por defecto.
+
+```javascript
+// Refrescar de manera segura (confirma cambios, solo vista)
+apexGridUtils.refreshGridSafe('mi_grid');
+
+// Refrescar sin confirmar cambios
+apexGridUtils.refreshGridSafe('mi_grid', false);
+
+// Refrescar de manera segura incluyendo región completa
+apexGridUtils.refreshGridSafe('mi_grid', true, true);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `commitChanges` (boolean): Si debe confirmar cambios antes de refrescar (default: true)
+- `refreshRegion` (boolean): Si debe refrescar también la región completa (default: false)
+
+**Retorna:** `boolean` - true si se refrescó correctamente
+
+**Casos de Uso para Evitar Borrado de Datos:**
+
+```javascript
+// ⭐ NUEVO: Para evitar que se borre la grilla
+function actualizarCostoSeguro() {
+    let nuevoCosto = calcularNuevoCosto();
+    apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, nuevoCosto, false);
+    
+    // Confirmar cambios sin refrescar (evita borrado)
+    apexGridUtils.commitGridChanges('mi_grid', true);
+    
+    // O usar la función segura que solo refresca la vista
+    apexGridUtils.refreshGridSafe('mi_grid', true, false);
+}
+
+// ⭐ NUEVO: Para casos donde necesitas mantener los datos
+function actualizarYConfirmar() {
+    // Hacer cambios
+    apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 150.50, false);
+    apexGridUtils.setCellValue('mi_grid', 'TOTAL', 1, 1500.00, false);
+    
+    // Confirmar cambios en el modelo
+    apexGridUtils.commitGridChanges('mi_grid', true);
+    
+    // Refrescar solo la vista para mostrar los cambios
+    apexGridUtils.refreshGridViewOnly('mi_grid', false);
+}
+
+// ⭐ NUEVO: Para tu caso específico (reemplaza tu código actual)
+let costoTotalAUtilizar = apexUtils.get('P1216_TOTAL_UTI');
+
+if (costoTotalAUtilizar !== window.lastTotalUti && costoTotalAUtilizar > 0) {
+    window.lastTotalUti = costoTotalAUtilizar;
+    
+    // Tu código original aquí...
+    let costoOriginal = apexGridUtils.getNumericCellValue('DetallesP', 'COSTO', 1);
+    let costoTotalAProducir = apexUtils.get('P1216_TOTAL_PROD');
+    let cantidadAProducir = apexGridUtils.getNumericCellValue('DetallesP', 'CANTIDAD', 1);
+    let diferenciaDeCosto = costoTotalAUtilizar - costoTotalAProducir;
+    let difereciaDeCostoPorUB = diferenciaDeCosto.toFixed(3) / cantidadAProducir;
+
+    let nuevoCosto = costoOriginal + difereciaDeCostoPorUB;
+    apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, nuevoCosto, false); // sin refresh automático
+    
+    // ⭐ NUEVO: Confirmar cambios sin borrar la grilla
+    apexGridUtils.commitGridChanges('DetallesP', true);
+    
+    // ⭐ NUEVO: Refrescar solo la vista de manera segura
+    apexGridUtils.refreshGridSafe('DetallesP', false, false);
+
+} else {
+    console.log('¿ Valor sin cambios - ¿por qué se ejecutó?');
+}
+```
 
 ## 🔧 Utilidades Generales
 
@@ -512,6 +576,63 @@ let [costo1, costo2] = apexUtils.getMultipleNumeric(['P1_COSTO1', 'P1_COSTO2'], 
 - Maneja formato europeo (1.234,56 → 1234.56)
 - Convierte automáticamente strings a números
 - Proporciona valor por defecto si la conversión falla
+
+### apexUtils.get(itemName, defaultValue)
+
+Alias abreviado de `apexUtils.getNumeric`. Obtiene el valor numérico de un item de APEX de forma más concisa.
+
+```javascript
+// Obtener valor numérico (forma abreviada)
+let total = apexUtils.get('P1_TOTAL', 0);
+
+// Obtener valor con valor por defecto personalizado
+let precio = apexUtils.get('P1_PRECIO', 100);
+
+// Obtener valor sin valor por defecto (usa 0)
+let cantidad = apexUtils.get('P1_CANTIDAD');
+```
+
+**Parámetros:**
+- `itemName` (string): Nombre del item de APEX
+- `defaultValue` (number): Valor por defecto si no se puede convertir (default: 0)
+
+**Retorna:** `number` - Valor numérico convertido
+
+**Características:**
+- Alias de `apexUtils.getNumeric` para mayor concisión
+- Maneja formato europeo automáticamente
+- Convierte strings a números de forma segura
+- Proporciona valor por defecto si la conversión falla
+- Ideal para uso frecuente donde se necesita obtener valores numéricos rápidamente
+
+### apexUtils.getMultipleNumeric(itemNames, defaultValue)
+
+Obtiene múltiples valores numéricos de items de APEX en una sola llamada.
+
+```javascript
+// Obtener múltiples valores
+let [costo1, costo2, costo3] = apexUtils.getMultipleNumeric(['P1_COSTO1', 'P1_COSTO2', 'P1_COSTO3'], 0);
+
+// Obtener valores con valor por defecto personalizado
+let [precio, cantidad, descuento] = apexUtils.getMultipleNumeric(['P1_PRECIO', 'P1_CANTIDAD', 'P1_DESCUENTO'], 100);
+
+// Usar destructuring para mayor claridad
+let valores = apexUtils.getMultipleNumeric(['P1_TOTAL', 'P1_SUBTOTAL'], 0);
+let total = valores[0];
+let subtotal = valores[1];
+```
+
+**Parámetros:**
+- `itemNames` (array): Array de nombres de items de APEX
+- `defaultValue` (number): Valor por defecto para todos los items (default: 0)
+
+**Retorna:** `array` - Array de valores numéricos en el mismo orden que los items proporcionados
+
+**Características:**
+- Obtiene múltiples valores en una sola operación
+- Mantiene el orden de los items en el array de entrada
+- Aplica el mismo valor por defecto a todos los items
+- Útil para obtener varios valores relacionados de una vez
 
 ## 📝 Ejemplos de Uso Completos
 
@@ -769,3 +890,164 @@ if (apexGridUtils.isInitialized()) {
 ## 📞 Soporte
 
 Para reportar problemas o solicitar nuevas funcionalidades, revisa los logs de la consola del navegador para obtener información detallada sobre errores y el estado de las operaciones.
+
+### Configuraciones Específicas
+
+#### setupCantidadPorCosto
+
+Configuración rápida para el caso más común: CANTIDAD × COSTO = TOTAL
+
+```javascript
+// Configuración automática con valores por defecto
+apexGridUtils.setupCantidadPorCosto('mi_grid');
+
+// Configuración personalizada
+apexGridUtils.setupCantidadPorCosto('mi_grid', 'QTY', 'PRICE', 'SUBTOTAL', 2);
+```
+
+#### ensureAutoCalculation
+
+Verifica y configura cálculos automáticos si no existen
+
+```javascript
+// Verificar si existe configuración para TOTAL
+apexGridUtils.ensureAutoCalculation('mi_grid', 'TOTAL');
+```
+
+### Gestión de Configuraciones
+
+```javascript
+// Obtener configuración específica
+let config = apexGridUtils.getAutoCalculationConfig('mi_grid', 'TOTAL');
+
+// Obtener todas las configuraciones del grid
+let todasConfigs = apexGridUtils.getAutoCalculationConfig('mi_grid');
+
+// Limpiar configuración específica
+apexGridUtils.clearAutoCalculationConfig('mi_grid', 'TOTAL');
+
+// Limpiar todas las configuraciones del grid
+apexGridUtils.clearAutoCalculationConfig('mi_grid');
+
+// Obtener todas las configuraciones almacenadas
+let todas = apexGridUtils.getAllAutoCalculationConfigs();
+```
+
+### Inserción de Datos
+
+#### setearDatosIG(configuracion)
+
+Inserta datos en un Interactive Grid con configuración avanzada.
+
+```javascript
+// Configuración básica con datos directos
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    datos: [
+        { id: 1, nombre: 'Producto A', precio: 100 },
+        { id: 2, nombre: 'Producto B', precio: 200 }
+    ],
+    limpiarAntes: true,
+    refrescar: true,
+    modoEdicion: true
+});
+
+// Configuración con mapeo de campos
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    datos: [
+        { codigo: 'A001', descripcion: 'Producto A', valor: 100 },
+        { codigo: 'A002', descripcion: 'Producto B', valor: 200 }
+    ],
+    mapeo: {
+        'ID': 'codigo',
+        'NOMBRE': 'descripcion',
+        'PRECIO': 'valor'
+    },
+    transformacion: function(registro, indice) {
+        // Agregar fecha de creación
+        registro.fecha_creacion = new Date().toISOString();
+        return registro;
+    },
+    filtro: function(registro, indice) {
+        // Solo insertar productos con valor > 50
+        return registro.valor > 50;
+    },
+    callback: function(resultado) {
+        console.log('Datos insertados:', resultado.procesados);
+    }
+});
+
+// Configuración con datos desde campo de página
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    campoOrigen: 'P1_DATOS_JSON',
+    limpiarAntes: true,
+    refrescar: true
+});
+```
+
+**Parámetros:**
+- `configuracion.regionId` (string): ID de la región del Interactive Grid
+- `configuracion.datos` (array|object): Datos a insertar (opcional si se usa campoOrigen)
+- `configuracion.campoOrigen` (string): Campo de la página que contiene los datos JSON (opcional si se usa datos)
+- `configuracion.mapeo` (object): Mapeo personalizado de campos {campoDestino: campoOrigen}
+- `configuracion.transformacion` (function): Función para transformar cada registro antes de insertar
+- `configuracion.filtro` (function): Función para filtrar registros antes de insertar
+- `configuracion.limpiarAntes` (boolean): Si debe limpiar datos existentes (default: true)
+- `configuracion.refrescar` (boolean): Si debe refrescar la grilla (default: true)
+- `configuracion.modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
+- `configuracion.callback` (function): Función a ejecutar después de setear datos
+
+**Retorna:** `object` - Objeto con resultado de la operación
+```javascript
+{
+    success: true,
+    procesados: 5,
+    errores: 0,
+    total: 5
+}
+```
+
+#### setearDatosDirectos(regionId, datos, limpiar, refrescar, modoEdicion)
+
+Versión simplificada para insertar datos directamente.
+
+```javascript
+// Insertar datos simples
+let datos = [
+    { ID: 1, NOMBRE: 'Producto A', PRECIO: 100 },
+    { ID: 2, NOMBRE: 'Producto B', PRECIO: 200 }
+];
+
+apexGridUtils.setearDatosDirectos('mi_grid', datos);
+
+// Insertar sin limpiar datos existentes
+apexGridUtils.setearDatosDirectos('mi_grid', datos, false, true, true);
+```
+
+**Parámetros:**
+- `regionId` (string): ID de la región del Interactive Grid
+- `datos` (array|object): Datos a insertar
+- `limpiar` (boolean): Si debe limpiar datos existentes (default: true)
+- `refrescar` (boolean): Si debe refrescar la grilla (default: true)
+- `modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
+
+#### setearDatos(regionId, campoOrigen, limpiar, refrescar, modoEdicion)
+
+Inserta datos desde un campo de la página que contiene JSON.
+
+```javascript
+// Insertar desde campo P1_DATOS_JSON
+apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON');
+
+// Insertar sin limpiar y sin refrescar
+apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON', false, false, true);
+```
+
+**Parámetros:**
+- `regionId` (string): ID de la región del Interactive Grid
+- `campoOrigen` (string): Campo de la página que contiene los datos JSON
+- `limpiar` (boolean): Si debe limpiar datos existentes (default: true)
+- `refrescar` (boolean): Si debe refrescar la grilla (default: true)
+- `modoEdicion` (boolean): Si debe habilitar modo edición (default: true)

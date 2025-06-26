@@ -692,6 +692,52 @@ apexGridUtils.setupGridListener('mi_grid', function() {
     sumaConfig.calculateSum();
 });</code></pre>
 
+    <h4>sumColumnToItem(gridStaticId, columnName, targetItem, decimalPlaces, autoUpdate)</h4>
+    <p>Suma todos los valores de una columna específica del Interactive Grid y coloca el resultado en un item de APEX.</p>
+
+    <pre><code>// Configuración básica
+let config = apexGridUtils.sumColumnToItem('mi_grid', 'TOTAL', 'P1_SUMA_TOTAL', 2, true);
+
+// Configuración sin actualización automática
+let configManual = apexGridUtils.sumColumnToItem('mi_grid', 'PRECIO', 'P1_TOTAL_PRECIOS', 2, false);
+
+// Recalcular manualmente
+configManual.calculateSum();</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>gridStaticId</code> (string): Static ID del Interactive Grid</li>
+            <li><code>columnName</code> (string): Nombre de la columna a sumar</li>
+            <li><code>targetItem</code> (string): ID del item de APEX donde colocar el resultado</li>
+            <li><code>decimalPlaces</code> (number): Número de decimales para el resultado (default: 2)</li>
+            <li><code>autoUpdate</code> (boolean): Si debe actualizar automáticamente cuando cambien los datos (default: true)</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <p><code>object</code> - Objeto con configuración de la suma</p>
+        <pre><code>{
+    sum: 1500.50,                    // Suma actual
+    calculateSum: function(),        // Función para recalcular
+    gridStaticId: 'mi_grid',         // ID del grid
+    columnName: 'TOTAL',             // Nombre de la columna
+    targetItem: 'P1_SUMA_TOTAL'      // ID del item destino
+}</code></pre>
+    </div>
+
+    <div class="note">
+        <h4>Características:</h4>
+        <ul>
+            <li>Suma solo valores numéricos válidos (ignora nulos, undefined, vacíos)</li>
+            <li>Maneja formato europeo automáticamente (preserva el formato original)</li>
+            <li>Actualización automática cuando cambian los datos del grid</li>
+            <li>Permite recálculo manual usando <code>config.calculateSum()</code></li>
+            <li>Configura listeners para cambios en el modelo del grid</li>
+        </ul>
+    </div>
+
     <h3>Recálculos y Refrescos</h3>
     <pre><code>// Forzar recálculo de fórmula específica
 apexGridUtils.forceRecalculate('mi_grid', {
@@ -888,6 +934,79 @@ let [costo1, costo2] = apexUtils.getMultipleNumeric(['P1_COSTO1', 'P1_COSTO2'], 
             <li>Maneja formato europeo (1.234,56 → 1234.56)</li>
             <li>Convierte automáticamente strings a números</li>
             <li>Proporciona valor por defecto si la conversión falla</li>
+        </ul>
+    </div>
+
+    <h3>apexUtils.get(itemName, defaultValue)</h3>
+    <p>Alias abreviado de <code>apexUtils.getNumeric</code>. Obtiene el valor numérico de un item de APEX de forma más concisa.</p>
+
+    <pre><code>// Obtener valor numérico (forma abreviada)
+let total = apexUtils.get('P1_TOTAL', 0);
+
+// Obtener valor con valor por defecto personalizado
+let precio = apexUtils.get('P1_PRECIO', 100);
+
+// Obtener valor sin valor por defecto (usa 0)
+let cantidad = apexUtils.get('P1_CANTIDAD');</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>itemName</code> (string): Nombre del item de APEX</li>
+            <li><code>defaultValue</code> (number): Valor por defecto si no se puede convertir (default: 0)</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <p><code>number</code> - Valor numérico convertido</p>
+    </div>
+
+    <div class="note">
+        <h4>Características:</h4>
+        <ul>
+            <li>Alias de <code>apexUtils.getNumeric</code> para mayor concisión</li>
+            <li>Maneja formato europeo automáticamente</li>
+            <li>Convierte strings a números de forma segura</li>
+            <li>Proporciona valor por defecto si la conversión falla</li>
+            <li>Ideal para uso frecuente donde se necesita obtener valores numéricos rápidamente</li>
+        </ul>
+    </div>
+
+    <h3>apexUtils.getMultipleNumeric(itemNames, defaultValue)</h3>
+    <p>Obtiene múltiples valores numéricos de items de APEX en una sola llamada.</p>
+
+    <pre><code>// Obtener múltiples valores
+let [costo1, costo2, costo3] = apexUtils.getMultipleNumeric(['P1_COSTO1', 'P1_COSTO2', 'P1_COSTO3'], 0);
+
+// Obtener valores con valor por defecto personalizado
+let [precio, cantidad, descuento] = apexUtils.getMultipleNumeric(['P1_PRECIO', 'P1_CANTIDAD', 'P1_DESCUENTO'], 100);
+
+// Usar destructuring para mayor claridad
+let valores = apexUtils.getMultipleNumeric(['P1_TOTAL', 'P1_SUBTOTAL'], 0);
+let total = valores[0];
+let subtotal = valores[1];</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>itemNames</code> (array): Array de nombres de items de APEX</li>
+            <li><code>defaultValue</code> (number): Valor por defecto para todos los items (default: 0)</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <p><code>array</code> - Array de valores numéricos en el mismo orden que los items proporcionados</p>
+    </div>
+
+    <div class="note">
+        <h4>Características:</h4>
+        <ul>
+            <li>Obtiene múltiples valores en una sola operación</li>
+            <li>Mantiene el orden de los items en el array de entrada</li>
+            <li>Aplica el mismo valor por defecto a todos los items</li>
+            <li>Útil para obtener varios valores relacionados de una vez</li>
         </ul>
     </div>
 
