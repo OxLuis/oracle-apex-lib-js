@@ -457,116 +457,161 @@ function actualizarCostoYRecalcular() {
 
 ### Funciones de Confirmación de Cambios
 
-#### commitGridChanges(gridStaticId, commitAll)
+#### commitGridChanges(gridStaticId, commitAll, forceDirty)
 
-Confirma los cambios en el modelo del grid sin refrescar la vista. Útil para guardar cambios sin perder datos.
+Confirma los cambios en el modelo del grid sin refrescar la vista, forzando el estado "dirty" si es necesario.
 
 ```javascript
-// Confirmar todos los cambios en el grid
-apexGridUtils.commitGridChanges('mi_grid', true);
+// Confirmar todos los cambios con estado dirty forzado
+apexGridUtils.commitGridChanges('mi_grid', true, true);
 
 // Confirmar solo el registro seleccionado
-apexGridUtils.commitGridChanges('mi_grid', false);
+apexGridUtils.commitGridChanges('mi_grid', false, true);
+
+// Confirmar sin forzar estado dirty
+apexGridUtils.commitGridChanges('mi_grid', true, false);
 ```
 
 **Parámetros:**
 - `gridStaticId` (string): Static ID del Interactive Grid
 - `commitAll` (boolean): Si debe confirmar todos los registros (default: true)
+- `forceDirty` (boolean): Si debe forzar el estado dirty antes de confirmar (default: true)
 
 **Retorna:** `boolean` - true si se confirmaron correctamente
 
-#### refreshGridViewOnly(gridStaticId, commitChanges)
+### Funciones con Estado Dirty
 
-Refresca solo la vista del grid sin recargar los datos, confirmando cambios primero.
+#### forceRecordDirty(gridStaticId, rowIndex)
+
+Fuerza el estado "dirty" de un registro para que APEX lo reconozca como modificado.
 
 ```javascript
-// Refrescar vista confirmando cambios primero
-apexGridUtils.refreshGridViewOnly('mi_grid', true);
+// Forzar estado dirty en la fila seleccionada
+apexGridUtils.forceRecordDirty('mi_grid', -1);
 
-// Refrescar vista sin confirmar cambios
-apexGridUtils.refreshGridViewOnly('mi_grid', false);
+// Forzar estado dirty en la primera fila
+apexGridUtils.forceRecordDirty('mi_grid', 1);
+
+// Forzar estado dirty en la tercera fila
+apexGridUtils.forceRecordDirty('mi_grid', 3);
 ```
 
 **Parámetros:**
 - `gridStaticId` (string): Static ID del Interactive Grid
-- `commitChanges` (boolean): Si debe confirmar cambios antes de refrescar (default: true)
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
 
-**Retorna:** `boolean` - true si se refrescó correctamente
+**Retorna:** `boolean` - true si se marcó correctamente
 
-#### refreshGridSafe(gridStaticId, commitChanges, refreshRegion)
+#### forceDirtyState(model, targetRow, columnName)
 
-Refresca el grid de manera segura, confirmando cambios y refrescando solo la vista por defecto.
+Función interna mejorada que fuerza el estado "dirty" usando múltiples métodos de APEX.
 
 ```javascript
-// Refrescar de manera segura (confirma cambios, solo vista)
-apexGridUtils.refreshGridSafe('mi_grid');
+// Usar directamente con modelo y registro
+const grid = apex.region('mi_grid').call("getViews").grid;
+const model = grid.model;
+const record = grid.getSelectedRecords()[0][1];
 
-// Refrescar sin confirmar cambios
-apexGridUtils.refreshGridSafe('mi_grid', false);
+apexGridUtils.forceDirtyState(model, record, 'COSTO');
+```
 
-// Refrescar de manera segura incluyendo región completa
-apexGridUtils.refreshGridSafe('mi_grid', true, true);
+**Parámetros:**
+- `model` (object): Modelo del grid
+- `targetRow` (object): Registro objetivo
+- `columnName` (string): Nombre de la columna (opcional)
+
+**Retorna:** `boolean` - true si se marcó correctamente usando al menos un método
+
+#### setCellValueWithDirty(gridStaticId, columnName, rowIndex, value, refresh, forceDirty)
+
+Setea un valor en una celda específica y automáticamente fuerza el estado dirty.
+
+```javascript
+// Setear valor con estado dirty forzado
+apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, true, true);
+
+// Setear valor sin forzar estado dirty
+apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, true, false);
+
+// Setear valor sin refrescar vista
+apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, false, true);
 ```
 
 **Parámetros:**
 - `gridStaticId` (string): Static ID del Interactive Grid
-- `commitChanges` (boolean): Si debe confirmar cambios antes de refrescar (default: true)
-- `refreshRegion` (boolean): Si debe refrescar también la región completa (default: false)
+- `columnName` (string): Nombre de la columna
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+- `value` (any): Valor a establecer
+- `refresh` (boolean): Si debe refrescar la vista (default: true)
+- `forceDirty` (boolean): Si debe forzar el estado dirty (default: true)
 
-**Retorna:** `boolean` - true si se refrescó correctamente
+**Retorna:** `boolean` - true si se estableció correctamente
 
-**Casos de Uso para Evitar Borrado de Datos:**
+#### setSelectedCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)
+
+Setea un valor en la fila seleccionada con estado dirty forzado.
 
 ```javascript
-// ⭐ NUEVO: Para evitar que se borre la grilla
-function actualizarCostoSeguro() {
-    let nuevoCosto = calcularNuevoCosto();
-    apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, nuevoCosto, false);
-    
-    // Confirmar cambios sin refrescar (evita borrado)
-    apexGridUtils.commitGridChanges('mi_grid', true);
-    
-    // O usar la función segura que solo refresca la vista
-    apexGridUtils.refreshGridSafe('mi_grid', true, false);
-}
+// Setear valor en fila seleccionada con estado dirty
+apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 150.50);
 
-// ⭐ NUEVO: Para casos donde necesitas mantener los datos
-function actualizarYConfirmar() {
-    // Hacer cambios
-    apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 150.50, false);
-    apexGridUtils.setCellValue('mi_grid', 'TOTAL', 1, 1500.00, false);
-    
-    // Confirmar cambios en el modelo
-    apexGridUtils.commitGridChanges('mi_grid', true);
-    
-    // Refrescar solo la vista para mostrar los cambios
-    apexGridUtils.refreshGridViewOnly('mi_grid', false);
-}
+// Setear valor sin refrescar
+apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 150.50, false, true);
+```
 
-// ⭐ NUEVO: Para tu caso específico (reemplaza tu código actual)
-let costoTotalAUtilizar = apexUtils.get('P1216_TOTAL_UTI');
+#### setFirstCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)
 
-if (costoTotalAUtilizar !== window.lastTotalUti && costoTotalAUtilizar > 0) {
-    window.lastTotalUti = costoTotalAUtilizar;
-    
-    // Tu código original aquí...
-    let costoOriginal = apexGridUtils.getNumericCellValue('DetallesP', 'COSTO', 1);
-    let costoTotalAProducir = apexUtils.get('P1216_TOTAL_PROD');
-    let cantidadAProducir = apexGridUtils.getNumericCellValue('DetallesP', 'CANTIDAD', 1);
-    let diferenciaDeCosto = costoTotalAUtilizar - costoTotalAProducir;
-    let difereciaDeCostoPorUB = diferenciaDeCosto.toFixed(3) / cantidadAProducir;
+Setea un valor en la primera fila con estado dirty forzado.
 
-    let nuevoCosto = costoOriginal + difereciaDeCostoPorUB;
-    apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, nuevoCosto, false); // sin refresh automático
-    
-    // ⭐ NUEVO: Confirmar cambios sin borrar la grilla
-    apexGridUtils.commitGridChanges('DetallesP', true);
-    
-    // ⭐ NUEVO: Refrescar solo la vista de manera segura
-    apexGridUtils.refreshGridSafe('DetallesP', false, false);
+```javascript
+// Setear valor en primera fila con estado dirty
+apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 150.50);
 
-} else {
-    console.log('¿ Valor sin cambios - ¿por qué se ejecutó?');
+// Setear valor sin forzar estado dirty
+apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 150.50, true, false);
+```
+
+### Solución al Problema de Confirmación
+
+**Problema:** Los cambios programáticos no se confirman automáticamente porque APEX no marca los registros como "dirty".
+
+**Solución:** Usar las funciones con estado dirty forzado:
+
+```javascript
+// ❌ Código que NO funciona (no se confirma automáticamente)
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, nuevoCosto, true);
+apexGridUtils.commitGridChanges('DetallesP');
+
+// ✅ Código que SÍ funciona (se confirma automáticamente)
+apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, nuevoCosto, true, true);
+apexGridUtils.commitGridChanges('DetallesP', true, true);
+
+// ✅ Alternativa: Forzar estado dirty manualmente
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, nuevoCosto, true);
+apexGridUtils.forceRecordDirty('DetallesP', 1);
+apexGridUtils.commitGridChanges('DetallesP');
+```
+
+**Casos de Uso:**
+
+```javascript
+// Después de modificar valores programáticamente
+let nuevoCosto = calcularNuevoCosto();
+apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, nuevoCosto, true, true);
+
+// Confirmar cambios inmediatamente
+apexGridUtils.commitGridChanges('DetallesP', true, true);
+
+// Para operaciones masivas
+function actualizarCostosMasivamente() {
+    let costos = obtenerNuevosCostos();
+    
+    costos.forEach((costo, index) => {
+        apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', index + 1, costo, false, true);
+    });
+    
+    // Confirmar todos los cambios al final
+    apexGridUtils.commitGridChanges('DetallesP', true, true);
 }
 ```
 

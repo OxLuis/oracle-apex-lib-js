@@ -1785,7 +1785,12 @@ window.apexGridUtils = (function() {
         refreshGridAndRecalculateSimple: refreshGridAndRecalculateSimple,
         commitGridChanges: commitGridChanges,
         refreshGridViewOnly: refreshGridViewOnly,
-        refreshGridSafe: refreshGridSafe
+        refreshGridSafe: refreshGridSafe,
+        forceRecordDirty: forceRecordDirty,
+        setCellValueWithDirty: setCellValueWithDirty,
+        setSelectedCellValueWithDirty: setSelectedCellValueWithDirty,
+        setFirstCellValueWithDirty: setFirstCellValueWithDirty,
+        forceDirtyState: forceDirtyState
     };
 
     // Inicializar el módulo automáticamente
@@ -3065,12 +3070,160 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
     }
 
     /**
+     * Forzar el estado "dirty" de un registro usando múltiples métodos
+     * @param {object} model - Modelo del grid
+     * @param {object} targetRow - Registro objetivo
+     * @param {string} columnName - Nombre de la columna (opcional)
+     * @returns {boolean} - true si se marcó correctamente
+     */
+    function forceDirtyState(model, targetRow, columnName = null) {
+        try {
+            console.log(`🔄 apexGridUtils: Forzando dirty state usando múltiples métodos...`);
+            
+            let successCount = 0;
+            
+            // Método 1: markDirty
+            try {
+                if (model.markDirty) {
+                    model.markDirty(targetRow);
+                    successCount++;
+                    console.log(`✅ apexGridUtils: Dirty state usando markDirty()`);
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error con markDirty:`, e);
+            }
+            
+            // Método 2: setDirty en modelo
+            try {
+                if (model.setDirty) {
+                    model.setDirty(targetRow, true);
+                    successCount++;
+                    console.log(`✅ apexGridUtils: Dirty state usando model.setDirty()`);
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error con model.setDirty:`, e);
+            }
+            
+            // Método 3: setDirty en registro
+            try {
+                if (targetRow.setDirty) {
+                    targetRow.setDirty(true);
+                    successCount++;
+                    console.log(`✅ apexGridUtils: Dirty state usando record.setDirty()`);
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error con record.setDirty:`, e);
+            }
+            
+            // Método 4: setValue con opciones dirty
+            try {
+                if (columnName && model.setValue && model.setValue.length > 3) {
+                    const currentValue = model.getValue(targetRow, columnName);
+                    if (currentValue !== undefined) {
+                        model.setValue(targetRow, columnName, currentValue, { dirty: true });
+                        successCount++;
+                        console.log(`✅ apexGridUtils: Dirty state usando setValue con opciones`);
+                    }
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error con setValue con opciones:`, e);
+            }
+            
+            // Método 5: updateRecord
+            try {
+                if (model.updateRecord) {
+                    model.updateRecord(targetRow);
+                    successCount++;
+                    console.log(`✅ apexGridUtils: Dirty state usando updateRecord()`);
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error con updateRecord:`, e);
+            }
+            
+            // Método 6: Simular cambio manual
+            try {
+                if (columnName) {
+                    const currentValue = model.getValue(targetRow, columnName);
+                    if (currentValue !== undefined) {
+                        // Re-establecer el valor para forzar dirty state
+                        model.setValue(targetRow, columnName, currentValue);
+                        successCount++;
+                        console.log(`✅ apexGridUtils: Dirty state usando re-establecimiento de valor`);
+                    }
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error con re-establecimiento:`, e);
+            }
+            
+            console.log(`📊 apexGridUtils: ${successCount} métodos de dirty state ejecutados exitosamente`);
+            return successCount > 0;
+            
+        } catch (error) {
+            console.error('apexGridUtils forceDirtyState error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Forzar el estado "dirty" de un registro para que APEX lo reconozca como modificado
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {number} rowIndex - Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+     * @returns {boolean} - true si se marcó correctamente
+     */
+    function forceRecordDirty(gridStaticId, rowIndex = -1) {
+        try {
+            console.log(`🔄 apexGridUtils: Forzando estado dirty en ${gridStaticId}, fila ${rowIndex}`);
+            
+            const grid = apex.region(gridStaticId).call("getViews").grid;
+            const model = grid.model;
+            
+            let targetRow = null;
+            
+            // Obtener fila objetivo
+            if (rowIndex === -1) {
+                const array = grid.getSelectedRecords();
+                if (array && array.length > 0) {
+                    targetRow = array[0][1];
+                } else {
+                    console.warn(`apexGridUtils: No hay fila seleccionada en ${gridStaticId}`);
+                    return false;
+                }
+            } else {
+                const allRecords = [];
+                model.forEach(function(record) {
+                    allRecords.push(record);
+                });
+                
+                if (allRecords.length >= rowIndex && rowIndex > 0) {
+                    targetRow = allRecords[rowIndex - 1];
+                } else {
+                    console.warn(`apexGridUtils: Fila ${rowIndex} fuera de rango en ${gridStaticId}`);
+                    return false;
+                }
+            }
+            
+            if (!targetRow) {
+                console.error(`apexGridUtils: No se pudo obtener fila objetivo`);
+                return false;
+            }
+            
+            // Usar la función mejorada para forzar dirty state
+            return forceDirtyState(model, targetRow, 'COSTO'); // Usar COSTO como columna por defecto
+            
+        } catch (error) {
+            console.error(`apexGridUtils forceRecordDirty error para ${gridStaticId}:`, error);
+            return false;
+        }
+    }
+
+    /**
      * Confirmar cambios en el modelo del grid sin refrescar la vista
      * @param {string} gridStaticId - Static ID del Interactive Grid
      * @param {boolean} commitAll - Si debe hacer commit de todos los registros (default: true)
+     * @param {boolean} forceDirty - Si debe forzar el estado dirty antes de confirmar (default: true)
      * @returns {boolean} - true si se confirmaron correctamente
      */
-    function commitGridChanges(gridStaticId, commitAll = true) {
+    function commitGridChanges(gridStaticId, commitAll = true, forceDirty = true) {
         try {
             console.log(`💾 apexGridUtils: Confirmando cambios en ${gridStaticId}`);
             
@@ -3083,8 +3236,39 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                 // Confirmar todos los registros modificados
                 model.forEach(function(record) {
                     try {
+                        // Forzar estado dirty si está habilitado
+                        if (forceDirty) {
+                            try {
+                                if (model.markDirty) {
+                                    model.markDirty(record);
+                                }
+                                if (record.setDirty) {
+                                    record.setDirty(true);
+                                }
+                            } catch (dirtyError) {
+                                console.warn(`apexGridUtils: Error al forzar dirty state:`, dirtyError);
+                            }
+                        }
+                        
                         // Verificar si el registro está modificado
+                        let isModified = false;
+                        
+                        // Método 1: Usar isDirty si está disponible
                         if (model.isDirty && model.isDirty(record)) {
+                            isModified = true;
+                        }
+                        
+                        // Método 2: Verificar si tiene propiedades de modificación
+                        if (record.isDirty && record.isDirty()) {
+                            isModified = true;
+                        }
+                        
+                        // Método 3: Siempre intentar confirmar si forceDirty está habilitado
+                        if (forceDirty) {
+                            isModified = true;
+                        }
+                        
+                        if (isModified) {
                             // Marcar como confirmado
                             if (model.markDirty) {
                                 model.markDirty(record);
@@ -3119,6 +3303,16 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                     const array = grid.getSelectedRecords();
                     if (array && array.length > 0) {
                         const selectedRecord = array[0][1];
+                        
+                        // Forzar estado dirty si está habilitado
+                        if (forceDirty) {
+                            if (model.markDirty) {
+                                model.markDirty(selectedRecord);
+                            }
+                            if (selectedRecord.setDirty) {
+                                selectedRecord.setDirty(true);
+                            }
+                        }
                         
                         if (model.markDirty) {
                             model.markDirty(selectedRecord);
@@ -3249,4 +3443,196 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             console.error(`apexGridUtils refreshGridSafe error para ${gridStaticId}:`, error);
             return false;
         }
+    }
+
+    /**
+     * Setear valor en una celda específica del Interactive Grid con estado dirty
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {string} columnName - Nombre de la columna
+     * @param {number} rowIndex - Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+     * @param {any} value - Valor a establecer
+     * @param {boolean} refresh - Si debe refrescar la vista (default: true)
+     * @param {boolean} forceDirty - Si debe forzar el estado dirty (default: true)
+     * @returns {boolean} - true si se estableció correctamente
+     */
+    function setCellValueWithDirty(gridStaticId, columnName, rowIndex, value, refresh = true, forceDirty = true) {
+        try {
+            console.log(`🔧 apexGridUtils: Seteando valor con dirty ${value} en ${columnName}, fila ${rowIndex}`);
+            
+            // Obtener el grid usando el método que funciona
+            const grid = apex.region(gridStaticId).call("getViews").grid;
+            const model = grid.model;
+            
+            let targetRow = null;
+            
+            // Si rowIndex es -1, usar la fila seleccionada
+            if (rowIndex === -1) {
+                const array = grid.getSelectedRecords();
+                if (array && array.length > 0) {
+                    targetRow = array[0][1];
+                } else {
+                    console.warn(`apexGridUtils: No hay fila seleccionada en ${gridStaticId}`);
+                    return false;
+                }
+            } else {
+                // Convertir rowIndex a índice interno (rowIndex - 1)
+                const internalIndex = rowIndex - 1;
+                
+                // Obtener todas las filas del modelo, no solo las seleccionadas
+                const allRecords = [];
+                model.forEach(function(record) {
+                    allRecords.push(record);
+                });
+                
+                if (allRecords.length > internalIndex && internalIndex >= 0) {
+                    targetRow = allRecords[internalIndex];
+                } else {
+                    console.warn(`apexGridUtils: Fila ${rowIndex} fuera de rango en ${gridStaticId} (total filas: ${allRecords.length})`);
+                    return false;
+                }
+            }
+            
+            if (targetRow) {
+                // Obtener valor actual para comparar
+                const currentValue = model.getValue(targetRow, columnName);
+                console.log(`📊 apexGridUtils: Valor actual en ${columnName}: ${currentValue}`);
+                
+                // Establecer el valor en el modelo
+                model.setValue(targetRow, columnName, value);
+                console.log(`📊 apexGridUtils: Valor establecido: ${value}`);
+                
+                // Forzar estado dirty si está habilitado
+                if (forceDirty) {
+                    console.log(`🔄 apexGridUtils: Forzando estado dirty...`);
+                    
+                    // Usar la función mejorada para forzar dirty state
+                    const dirtySuccess = forceDirtyState(model, targetRow, columnName);
+                    
+                    if (dirtySuccess) {
+                        console.log(`✅ apexGridUtils: Estado dirty forzado exitosamente`);
+                    } else {
+                        console.warn(`⚠️ apexGridUtils: No se pudo forzar estado dirty`);
+                    }
+                }
+                
+                // Refrescar la vista si está habilitado
+                if (refresh) {
+                    try {
+                        // Método correcto para Interactive Grids de APEX
+                        grid.view$.trigger('refresh');
+                        console.log(`✅ apexGridUtils: Vista refrescada`);
+                    } catch (e) {
+                        console.warn('apexGridUtils: No se pudo refrescar la vista:', e);
+                    }
+                }
+                
+                // Verificación final
+                setTimeout(() => {
+                    const finalValue = model.getValue(targetRow, columnName);
+                    console.log(`📊 apexGridUtils: Verificación final - ${columnName}: ${finalValue}`);
+                    
+                    // Verificar si el registro está marcado como dirty usando múltiples métodos
+                    let isDirty = false;
+                    
+                    try {
+                        // Método 1: Usar isDirty del modelo
+                        if (model.isDirty && model.isDirty(targetRow)) {
+                            isDirty = true;
+                            console.log(`✅ apexGridUtils: Registro confirmado como dirty usando model.isDirty()`);
+                        }
+                    } catch (e) {
+                        console.warn(`apexGridUtils: Error con model.isDirty:`, e);
+                    }
+                    
+                    try {
+                        // Método 2: Usar isDirty del registro
+                        if (targetRow.isDirty && targetRow.isDirty()) {
+                            isDirty = true;
+                            console.log(`✅ apexGridUtils: Registro confirmado como dirty usando record.isDirty()`);
+                        }
+                    } catch (e) {
+                        console.warn(`apexGridUtils: Error con record.isDirty:`, e);
+                    }
+                    
+                    try {
+                        // Método 3: Verificar si el registro tiene propiedades de modificación
+                        if (targetRow.isModified && targetRow.isModified()) {
+                            isDirty = true;
+                            console.log(`✅ apexGridUtils: Registro confirmado como modified usando isModified()`);
+                        }
+                    } catch (e) {
+                        console.warn(`apexGridUtils: Error con isModified:`, e);
+                    }
+                    
+                    try {
+                        // Método 4: Verificar si el registro tiene estado de cambio
+                        if (targetRow.hasChanges && targetRow.hasChanges()) {
+                            isDirty = true;
+                            console.log(`✅ apexGridUtils: Registro confirmado como changed usando hasChanges()`);
+                        }
+                    } catch (e) {
+                        console.warn(`apexGridUtils: Error con hasChanges:`, e);
+                    }
+                    
+                    if (!isDirty) {
+                        console.warn(`⚠️ apexGridUtils: Registro no está marcado como dirty - intentando forzar...`);
+                        
+                        // Intentar forzar dirty state una vez más
+                        try {
+                            if (model.setDirty) {
+                                model.setDirty(targetRow, true);
+                                console.log(`🔄 apexGridUtils: Dirty state forzado nuevamente usando setDirty()`);
+                            }
+                        } catch (e) {
+                            console.warn(`apexGridUtils: Error al forzar dirty state:`, e);
+                        }
+                        
+                        try {
+                            if (model.markDirty) {
+                                model.markDirty(targetRow);
+                                console.log(`🔄 apexGridUtils: Dirty state forzado nuevamente usando markDirty()`);
+                            }
+                        } catch (e) {
+                            console.warn(`apexGridUtils: Error al forzar dirty state:`, e);
+                        }
+                    } else {
+                        console.log(`✅ apexGridUtils: Estado dirty confirmado correctamente`);
+                    }
+                }, 100);
+                
+                return true;
+            }
+            
+            return false;
+            
+        } catch (error) {
+            console.error('apexGridUtils setCellValueWithDirty error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Setear valor en la fila seleccionada con estado dirty
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {string} columnName - Nombre de la columna
+     * @param {any} value - Valor a establecer
+     * @param {boolean} refresh - Si debe refrescar la vista (default: true)
+     * @param {boolean} forceDirty - Si debe forzar el estado dirty (default: true)
+     * @returns {boolean} - true si se estableció correctamente
+     */
+    function setSelectedCellValueWithDirty(gridStaticId, columnName, value, refresh = true, forceDirty = true) {
+        return setCellValueWithDirty(gridStaticId, columnName, -1, value, refresh, forceDirty);
+    }
+
+    /**
+     * Setear valor en la primera fila con estado dirty
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {string} columnName - Nombre de la columna
+     * @param {any} value - Valor a establecer
+     * @param {boolean} refresh - Si debe refrescar la vista (default: true)
+     * @param {boolean} forceDirty - Si debe forzar el estado dirty (default: true)
+     * @returns {boolean} - true si se estableció correctamente
+     */
+    function setFirstCellValueWithDirty(gridStaticId, columnName, value, refresh = true, forceDirty = true) {
+        return setCellValueWithDirty(gridStaticId, columnName, 1, value, refresh, forceDirty);
     }

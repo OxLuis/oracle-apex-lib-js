@@ -22,37 +22,70 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
   - Parámetro `refreshRegion` por defecto en `true`
 
 - **`refreshGridAndRecalculateSimple(gridStaticId, targetColumn, delay)`**: Función combinada para refrescar y recalcular
-  - Combina el refresco del grid con recálculo automático de fórmulas
+  - Combina refresco del grid con recálculo automático de fórmulas
   - Permite especificar columna específica para recálculo
   - Delay configurable para asegurar sincronización
   - Ideal para operaciones post-modificación de datos
 
+#### Funciones de Confirmación de Cambios
+- **`commitGridChanges(gridStaticId, commitAll, forceDirty)`**: Confirma cambios en el modelo sin refrescar la vista
+  - Evita borrado de datos al refrescar
+  - Opción para forzar estado "dirty" de registros
+  - Confirmación selectiva (todos los registros o solo seleccionado)
+  - Manejo robusto de errores con logs detallados
+
+- **`refreshGridViewOnly(gridStaticId, commitChanges)`**: Refresca solo la vista del grid
+  - No recarga datos del servidor
+  - Opción para confirmar cambios antes de refrescar
+  - Métodos alternativos de refresco para compatibilidad
+
+- **`refreshGridSafe(gridStaticId, commitChanges, refreshRegion)`**: Refresco seguro que evita pérdida de datos
+  - Confirma cambios antes de refrescar
+  - Refresca solo la vista por defecto
+  - Opción para refrescar región completa con delay
+
+#### Funciones con Estado Dirty (⭐ NUEVO)
+- **`forceRecordDirty(gridStaticId, rowIndex)`**: Fuerza el estado "dirty" de un registro
+  - Soluciona el problema de confirmación automática
+  - Múltiples métodos para marcar registros como modificados
+  - Compatible con diferentes versiones de APEX
+  - Logs detallados para debugging
+
+- **`setCellValueWithDirty(gridStaticId, columnName, rowIndex, value, refresh, forceDirty)`**: Setea valores con estado dirty automático
+  - Combina seteo de valores con forzado de estado dirty
+  - Opción para controlar refresco de vista
+  - Verificación automática de estado dirty
+  - Ideal para cambios programáticos que requieren confirmación
+
+- **`setSelectedCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)`**: Helper para fila seleccionada
+- **`setFirstCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)`**: Helper para primera fila
+
 ### 🔧 Mejoras
 
-#### Manejo de Errores
-- Mejor manejo de errores en funciones de refresco
-- Logs detallados para debugging
-- Fallbacks automáticos cuando los métodos de refresco fallan
+#### Solución al Problema de Confirmación Automática
+- **Problema identificado**: Los cambios programáticos no se confirman automáticamente porque APEX no marca los registros como "dirty"
+- **Solución implementada**: Funciones que fuerzan el estado dirty antes de confirmar cambios
+- **Compatibilidad**: Múltiples métodos para diferentes versiones de APEX
+- **Documentación**: Guías completas para migrar código existente
 
-#### Documentación
-- Documentación completa de las nuevas funciones en README.md
-- Ejemplos de uso prácticos
-- Casos de uso específicos para diferentes escenarios
+#### Mejoras en commitGridChanges
+- Nuevo parámetro `forceDirty` para forzar estado dirty
+- Múltiples métodos de verificación de estado modificado
+- Mejor manejo de errores y logging
+- Compatibilidad con registros individuales y masivos
 
 ### 🐛 Correcciones
 
-#### Problemas de Sincronización
-- Resuelto problema de `gridStaticId is not defined` en operaciones de refresco
-- Mejorada sincronización entre modificaciones de datos y refresco de vista
-- Corrección en el manejo de referencias a variables no definidas
+- **Corrección de error**: `gridStaticId is not defined` en funciones de refresco
+- **Mejora de estabilidad**: Manejo robusto de errores en todas las funciones de grid
+- **Optimización**: Reducción de timeouts innecesarios en operaciones de grid
 
 ### 📚 Documentación
 
-#### README.md Actualizado
-- Nueva sección "Funciones de Refresco de Grid"
-- Ejemplos de uso para `refreshGrid()` y `refreshGridAndRecalculateSimple()`
-- Casos de uso específicos para diferentes escenarios
-- Mejor organización de la documentación
+- **Nueva sección**: "Funciones con Estado Dirty" en README
+- **Guía de migración**: Cómo actualizar código existente para usar nuevas funciones
+- **Casos de uso**: Ejemplos prácticos para diferentes escenarios
+- **Solución de problemas**: Guía para el problema de confirmación automática
 
 ### 🔄 Compatibilidad
 
