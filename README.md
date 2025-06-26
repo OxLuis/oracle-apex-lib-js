@@ -1,6 +1,21 @@
 # APEX Utils - Biblioteca de Utilidades para Oracle APEX
 
+**Autor:** Luis Talavera  
+**Versión:** 1.2.0  
+**Fecha:** 2024-12-19  
+**Licencia:** MIT
+
 Esta biblioteca proporciona un conjunto completo de utilidades para trabajar con Interactive Grids y elementos de Oracle APEX, facilitando operaciones comunes como cálculos automáticos, manipulación de datos y navegación.
+
+## 🚀 Características Principales
+
+- **Cálculos Automáticos**: Configuración fácil de fórmulas en Interactive Grids
+- **Formato Europeo**: Manejo robusto de números con formato europeo (1.234,56)
+- **Refresco Seguro**: Funciones que evitan borrar datos al refrescar
+- **Extracción Avanzada**: Extracción de datos con transformaciones y filtros
+- **Navegación Programática**: Control total sobre la navegación en grids
+- **API Limpia**: Funciones bien documentadas y fáciles de usar
+- **Optimización**: Sistema de debounce para mejor rendimiento
 
 ## 📋 Tabla de Contenidos
 

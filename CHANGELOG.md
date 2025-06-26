@@ -1,5 +1,10 @@
 # Changelog
 
+**APEX Utils - Biblioteca de Utilidades para Oracle APEX**  
+**Autor:** Luis Talavera  
+**Versión Actual:** 1.2.0  
+**Fecha:** 2024-12-19
+
 Todos los cambios notables en este proyecto serán documentados en este archivo.
 
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/),

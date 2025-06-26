@@ -1,3 +1,54 @@
+/**
+ * APEX Utils - Biblioteca de Utilidades para Oracle APEX
+ * =====================================================
+ * 
+ * Autor: Luis Talavera
+ * Versión: 1.2.0
+ * Fecha: 2024-12-19
+ * 
+ * Descripción:
+ * Esta biblioteca proporciona un conjunto completo de utilidades para trabajar 
+ * con Interactive Grids y elementos de Oracle APEX, facilitando operaciones 
+ * comunes como cálculos automáticos, manipulación de datos, navegación y 
+ * gestión de formularios dinámicos.
+ * 
+ * Características Principales:
+ * - Cálculos automáticos en Interactive Grids
+ * - Manejo robusto de formato europeo (1.234,56)
+ * - Funciones de refresco seguras (sin borrar datos)
+ * - Extracción y inserción de datos avanzada
+ * - Navegación programática en grids
+ * - Sistema de debounce para optimización
+ * - API limpia y bien documentada
+ * 
+ * Uso:
+ * 1. Incluir este archivo en tu aplicación APEX
+ * 2. El módulo se inicializa automáticamente
+ * 3. Usar las funciones globales disponibles
+ * 
+ * Ejemplo básico:
+ * ```javascript
+ * // Configurar cálculo automático
+ * apexGridUtils.setupAutoCalculation('mi_grid', {
+ *     sourceColumns: ['CANTIDAD', 'PRECIO'],
+ *     targetColumn: 'TOTAL',
+ *     formula: function(values) {
+ *         return values.CANTIDAD * values.PRECIO;
+ *     }
+ * });
+ * 
+ * // Obtener valor numérico
+ * let total = apexUtils.get('P1_TOTAL', 0);
+ * ```
+ * 
+ * Documentación completa: README.md
+ * Changelog: CHANGELOG.md
+ * 
+ * Licencia: MIT
+ * 
+ * =====================================================
+ */
+
 function habilitarEdicion(regionId) {
     try {
         var region = apex.region(regionId);
