@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>APEX Utils - Biblioteca de Utilidades para Oracle APEX</title>
+    <style>
+        /* Estilos generales */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            font-size: 12px;
+        }
+
+        /* Encabezados */
+        h1 {
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+            page-break-after: avoid;
+            font-weight: bold;
+        }
+
+        h2 {
+            color: #34495e;
+            font-size: 16px;
+            margin: 30px 0 15px 0;
+            border-left: 4px solid #3498db;
+            padding-left: 15px;
+            page-break-after: avoid;
+            font-weight: bold;
+        }
+
+        h3 {
+            color: #2c3e50;
+            font-size: 16px;
+            margin: 25px 0 10px 0;
+            page-break-after: avoid;
+            font-weight: bold;
+        }
+
+        h4 {
+            color: #34495e;
+            font-size: 16px;
+            margin: 20px 0 10px 0;
+            page-break-after: avoid;
+            font-weight: bold;
+        }
+
+        /* Párrafos y texto */
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+            font-size: 12px;
+        }
+
+        /* Listas */
+        ul, ol {
+            margin: 15px 0;
+            padding-left: 30px;
+            font-size: 12px;
+        }
+
+        li {
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        /* Tabla de contenidos */
+        .toc {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+
+        .toc h2 {
+            border: none;
+            padding: 0;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .toc ul {
+            list-style-type: none;
+            padding-left: 0;
+            font-size: 12px;
+        }
+
+        .toc li {
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+
+        .toc a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 12px;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        /* Bloques de código */
+        pre {
+            background-color: #1e1e1e;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 11px;
+            line-height: 1.4;
+            page-break-inside: avoid;
+            position: relative;
+            white-space: pre;
+            tab-size: 4;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+            font-size: 11px;
+            color: #d4d4d4;
+        }
+
+        /* Botón de copiar */
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: #007acc;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 5px 10px;
+            font-size: 10px;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.3s;
+        }
+
+        .copy-button:hover {
+            opacity: 1;
+        }
+
+        .copy-button.copied {
+            background: #28a745;
+        }
+
+        code {
+            background-color: #f1f3f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 11px;
+            color: #e83e8c;
+        }
+
+        /* Parámetros y retornos */
+        .params {
+            background-color: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 15px;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+
+        .params h4 {
+            margin-top: 0;
+            color: #2980b9;
+            font-size: 16px;
+        }
+
+        .params ul {
+            font-size: 12px;
+        }
+
+        .return {
+            background-color: #e8f5e8;
+            border-left: 4px solid #27ae60;
+            padding: 15px;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+
+        .return h4 {
+            margin-top: 0;
+            color: #27ae60;
+            font-size: 16px;
+        }
+
+        .return pre {
+            font-size: 11px;
+        }
+
+        /* Ejemplos */
+        .example {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            page-break-inside: avoid;
+        }
+
+        .example h4 {
+            color: #856404;
+            margin-top: 0;
+            font-size: 16px;
+        }
+
+        /* Casos de aplicación */
+        .use-cases {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .use-case {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            page-break-inside: avoid;
+        }
+
+        .use-case h4 {
+            color: #495057;
+            margin-top: 0;
+            font-size: 16px;
+        }
+
+        .use-case ul {
+            font-size: 12px;
+        }
+
+        /* Advertencias y notas */
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+
+        .warning h4 {
+            color: #856404;
+            margin-top: 0;
+            font-size: 16px;
+        }
+
+        .warning ol {
+            font-size: 12px;
+        }
+
+        .note {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            page-break-inside: avoid;
+        }
+
+        .note h4 {
+            color: #0c5460;
+            margin-top: 0;
+            font-size: 16px;
+        }
+
+        .note ul {
+            font-size: 12px;
+        }
+
+        /* Iconos */
+        .icon {
+            font-size: 1.2em;
+            margin-right: 8px;
+        }
+
+        /* Saltos de página */
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* Estilos para impresión */
+        @media print {
+            body {
+                font-size: 12pt;
+                line-height: 1.4;
+                margin: 0;
+                padding: 15px;
+            }
+
+            h1, h2, h3, h4 { font-size: 14pt; }
+
+            pre {
+                font-size: 10pt;
+                white-space: pre;
+                word-wrap: normal;
+                background-color: #f8f9fa;
+                color: #000;
+                border: 1px solid #ccc;
+            }
+
+            pre code {
+                color: #000 !important;
+                background: none !important;
+            }
+
+            /* Ocultar resaltado de sintaxis en impresión */
+            pre code span {
+                color: #000 !important;
+                background: none !important;
+            }
+
+            /* Asegurar que el texto del código sea negro en impresión */
+            pre * {
+                color: #000 !important;
+                background: none !important;
+            }
+
+            .toc {
+                background-color: #fff;
+                border: 1px solid #000;
+            }
+
+            .example, .warning, .note, .params, .return {
+                background-color: #fff;
+                border: 1px solid #000;
+            }
+
+            a {
+                color: #000;
+                text-decoration: none;
+            }
+
+            .page-break {
+                page-break-before: always;
+            }
+
+            .copy-button {
+                display: none;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                font-size: 12px;
+            }
+
+            h1, h2, h3, h4 { font-size: 16px; }
+
+            .use-cases {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1><span class="icon">📚</span>APEX Utils - Biblioteca de Utilidades para Oracle APEX</h1>
+
+    <p>Esta biblioteca proporciona un conjunto completo de utilidades para trabajar con Interactive Grids y elementos de Oracle APEX, facilitando operaciones comunes como cálculos automáticos, manipulación de datos y navegación.</p>
+
+    <div class="toc">
+        <h2><span class="icon">📋</span>Tabla de Contenidos</h2>
+        <ul>
+            <li><a href="#instalacion">Instalación</a></li>
+            <li><a href="#funciones-principales">Funciones Principales</a></li>
+            <li><a href="#apex-grid-utils">APEX Grid Utils</a></li>
+            <li><a href="#insercion-datos">Inserción de Datos</a></li>
+            <li><a href="#utilidades-generales">Utilidades Generales</a></li>
+            <li><a href="#ejemplos-uso">Ejemplos de Uso</a></li>
+            <li><a href="#casos-aplicacion">Casos de Aplicación</a></li>
+            <li><a href="#consideraciones">Consideraciones Importantes</a></li>
+            <li><a href="#solucion-problemas">Solución de Problemas</a></li>
+        </ul>
+    </div>
+
+    <h2 id="instalacion"><span class="icon">🚀</span>Instalación</h2>
+    <ol>
+        <li>Incluir el archivo <code>apexUtils.js</code> en tu aplicación APEX</li>
+        <li>El módulo se inicializa automáticamente al cargar la página</li>
+        <li>Todas las funciones están disponibles globalmente</li>
+    </ol>
+
+    <h2 id="funciones-principales"><span class="icon">🔧</span>Funciones Principales</h2>
+
+    <h3>habilitarEdicion(regionId)</h3>
+    <p>Habilita el modo de edición en un Interactive Grid.</p>
+
+    <pre><code>// Habilitar edición en un grid específico
+habilitarEdicion('mi_grid_region');</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>regionId</code> (string): ID de la región del Interactive Grid</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <p><code>boolean</code> - true si se habilitó correctamente</p>
+    </div>
+
+    <h3>extraerDatosIG(configuracion)</h3>
+    <p>Extrae datos de un Interactive Grid con configuración avanzada.</p>
+
+    <pre><code>// Configuración básica
+extraerDatosIG({
+    regionId: 'mi_grid',
+    campos: [
+        { nombre: 'ID', alias: 'identificador' },
+        { nombre: 'NOMBRE', alias: 'nombre_completo' },
+        { nombre: 'ACTIVO', alias: 'estado', obligatorio: false }
+    ],
+    campoDestino: 'P1_DATOS_EXTRAIDOS',
+    formatoSalida: 'array' // 'array' o 'json'
+});
+
+// Con transformación de datos
+extraerDatosIG({
+    regionId: 'mi_grid',
+    campos: [
+        { 
+            nombre: 'FECHA', 
+            alias: 'fecha_formateada',
+            transformacion: function(valor) {
+                return new Date(valor).toLocaleDateString();
+            }
+        }
+    ],
+    campoDestino: 'P1_FECHAS'
+});</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>configuracion.regionId</code> (string): ID de la región del grid</li>
+            <li><code>configuracion.campos</code> (array): Array de objetos con configuración de campos</li>
+            <li><code>configuracion.campoDestino</code> (string): ID del item donde guardar los datos</li>
+            <li><code>configuracion.formatoSalida</code> (string): 'array' o 'json' (opcional)</li>
+            <li><code>configuracion.callback</code> (function): Función a ejecutar después de la extracción (opcional)</li>
+        </ul>
+    </div>
+
+    <h3>extraerDatos(regionId, campos, campoDestino)</h3>
+    <p>Versión simplificada de extraerDatosIG.</p>
+
+    <pre><code>// Extracción simple
+extraerDatos('mi_grid', ['ID', 'NOMBRE', 'EMAIL'], 'P1_DATOS');</code></pre>
+
+    <h2 id="apex-grid-utils"><span class="icon">🎯</span>APEX Grid Utils</h2>
+
+    <h3>Configuración de Cálculos Automáticos</h3>
+
+    <h4>setupAutoCalculation(gridStaticId, config)</h4>
+    <p>Configura cálculos automáticos en Interactive Grids.</p>
+
+    <pre><code>// Configurar multiplicación automática
+apexGridUtils.setupAutoCalculation('mi_grid', {
+    sourceColumns: ['CANTIDAD', 'PRECIO'],
+    targetColumn: 'TOTAL',
+    formula: function(values) {
+        return values.CANTIDAD * values.PRECIO;
+    },
+    decimalPlaces: 2,
+    autoTrigger: true,
+    triggerOnLoad: true
+});</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>gridStaticId</code> (string): Static ID del Interactive Grid</li>
+            <li><code>config.sourceColumns</code> (array): Columnas que disparan el cálculo</li>
+            <li><code>config.targetColumn</code> (string): Columna donde se guarda el resultado</li>
+            <li><code>config.formula</code> (function): Función que realiza el cálculo</li>
+            <li><code>config.decimalPlaces</code> (number): Número de decimales (default: 2)</li>
+            <li><code>config.autoTrigger</code> (boolean): Si debe configurar eventos automáticos (default: true)</li>
+            <li><code>config.triggerOnLoad</code> (boolean): Si debe ejecutar al cargar (default: false)</li>
+        </ul>
+    </div>
+
+    <h4>Configuraciones Rápidas</h4>
+    <pre><code>// Multiplicación simple
+apexGridUtils.quick.multiplyColumns('mi_grid', 'CANTIDAD', 'PRECIO', 'TOTAL', 2);
+
+// Precio con IVA
+apexGridUtils.quick.priceWithTax('mi_grid', 'PRECIO_BASE', 'PRECIO_CON_IVA', 10, 2);
+
+// Subtotal con descuento
+apexGridUtils.quick.subtotalWithDiscount('mi_grid', 'CANTIDAD', 'PRECIO', 'DESCUENTO', 'SUBTOTAL', 2);</code></pre>
+
+    <h3>Manipulación de Celdas</h3>
+
+    <h4>Obtener Valores</h4>
+    <pre><code>// Obtener valor de celda seleccionada
+let valor = apexGridUtils.getSelectedCellValue('mi_grid', 'TOTAL');
+
+// Obtener valor de primera fila
+let primerValor = apexGridUtils.getFirstCellValue('mi_grid', 'TOTAL');
+
+// Obtener valor de fila específica (índice 1 = primera fila)
+let valorFila = apexGridUtils.getCellValue('mi_grid', 'TOTAL', 1);
+
+// Obtener valores numéricos (con normalización de formato europeo)
+let valorNumerico = apexGridUtils.getSelectedNumericCellValue('mi_grid', 'TOTAL');
+let valorConDecimales = apexGridUtils.getSelectedNumericCellValueWithDecimals('mi_grid', 'TOTAL', 2);
+let valorEntero = apexGridUtils.getSelectedIntegerCellValue('mi_grid', 'TOTAL');</code></pre>
+
+    <h4>Obtener Valores Numéricos</h4>
+    <p>Estas funciones obtienen valores numéricos de celdas del Interactive Grid, preservando el formato original de los datos y proporcionando valores por defecto si la conversión falla.</p>
+
+    <h5>getNumericCellValue(gridStaticId, columnName, rowIndex, defaultValue)</h5>
+    <p>Obtiene el valor numérico de una celda específica, preservando el formato original de los datos.</p>
+
+    <pre><code>// Obtener valor numérico de fila específica
+let valor = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto
+
+// Obtener valor numérico de fila seleccionada
+let valorSeleccionado = apexGridUtils.getSelectedNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Obtener valor numérico de primera fila
+let primerValor = apexGridUtils.getFirstNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Obtener valor con decimales específicos
+let valorConDecimales = apexGridUtils.getNumericCellValueWithDecimals('mi_grid', 'TOTAL', 1, 2, 0); // grid, columna, fila1, 2decimales, valorPorDefecto
+
+// Obtener valor entero
+let valorEntero = apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>gridStaticId</code> (string): Static ID del Interactive Grid</li>
+            <li><code>columnName</code> (string): Nombre de la columna</li>
+            <li><code>rowIndex</code> (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada, default: -1)</li>
+            <li><code>defaultValue</code> (number): Valor por defecto si no se puede convertir (default: 0)</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <p><code>number</code> - Valor numérico preservando formato original</p>
+    </div>
+
+    <h5>Variantes Disponibles</h5>
+    <pre><code>// Para fila seleccionada
+apexGridUtils.getSelectedNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Para primera fila
+apexGridUtils.getFirstNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Con decimales específicos
+apexGridUtils.getNumericCellValueWithDecimals('mi_grid', 'TOTAL', 1, 2, 0); // grid, columna, fila1, 2decimales, valorPorDefecto
+apexGridUtils.getSelectedNumericCellValueWithDecimals('mi_grid', 'TOTAL', 2, 0); // grid, columna, 2decimales, valorPorDefecto
+apexGridUtils.getFirstNumericCellValueWithDecimals('mi_grid', 'TOTAL', 2, 0); // grid, columna, 2decimales, valorPorDefecto
+
+// Valores enteros
+apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto
+apexGridUtils.getSelectedIntegerCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+apexGridUtils.getFirstIntegerCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto</code></pre>
+
+    <div class="note">
+        <h4>Características:</h4>
+        <ul>
+            <li>Preserva el formato original de los datos (europeo o estándar)</li>
+            <li>Convierte strings a números de forma segura</li>
+            <li>Proporciona valor por defecto si la conversión falla</li>
+            <li>Preserva decimales exactos cuando es posible</li>
+            <li>Funciona con valores nulos, undefined o vacíos</li>
+        </ul>
+    </div>
+
+    <div class="example">
+        <h4>Ejemplo: Preservación de Formatos</h4>
+        <pre><code>// El grid contiene valores en diferentes formatos
+// Fila 1: "1.234,56" (formato europeo)
+// Fila 2: "1234.56" (formato estándar)
+// Fila 3: "1234" (entero)
+// Fila 4: "" (vacío)
+
+let valor1 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto → 1.234,56 (preserva formato)
+let valor2 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 2, 0); // grid, columna, fila2, valorPorDefecto → 1234.56 (preserva formato)
+let valor3 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 3, 0); // grid, columna, fila3, valorPorDefecto → 1234
+let valor4 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 4, 0); // grid, columna, fila4, valorPorDefecto → 0 (valor por defecto)
+
+// Con decimales específicos
+let valorFormateado = apexGridUtils.getNumericCellValueWithDecimals('mi_grid', 'TOTAL', 1, 2, 0); // grid, columna, fila1, 2decimales, valorPorDefecto → 1234.56
+
+// Como entero
+let valorEntero = apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto → 1235 (redondeado)</code></pre>
+    </div>
+
+    <h4>Establecer Valores</h4>
+    <pre><code>// Establecer valor en celda seleccionada
+apexGridUtils.setSelectedCellValue('mi_grid', 'TOTAL', 150.50);
+
+// Establecer valor en primera fila
+apexGridUtils.setFirstCellValue('mi_grid', 'TOTAL', 150.50);
+
+// Establecer valor numérico con decimales específicos
+apexGridUtils.setSelectedNumericCellValue('mi_grid', 'TOTAL', 150.50, 2);
+
+// Establecer valor con commit explícito (evita sobrescritura)
+apexGridUtils.setSelectedNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);</code></pre>
+
+    <h4>Establecer Valores con Commit Explícito</h4>
+    <p>Estas funciones realizan un commit explícito después de establecer el valor, lo que ayuda a evitar problemas de sobrescritura y asegura que los cambios se guarden correctamente en el modelo del grid.</p>
+
+    <h5>setNumericCellValueWithCommit(gridStaticId, columnName, rowIndex, value, decimalPlaces, refresh)</h5>
+    <p>Establece un valor numérico en una celda específica con commit explícito.</p>
+
+    <pre><code>// Establecer valor en fila específica con commit
+apexGridUtils.setNumericCellValueWithCommit('mi_grid', 'TOTAL', 1, 150.50, 2, true);
+
+// Establecer valor en fila seleccionada con commit
+apexGridUtils.setSelectedNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
+
+// Establecer valor en primera fila con commit
+apexGridUtils.setFirstNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>gridStaticId</code> (string): Static ID del Interactive Grid</li>
+            <li><code>columnName</code> (string): Nombre de la columna</li>
+            <li><code>rowIndex</code> (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)</li>
+            <li><code>value</code> (number): Valor numérico a establecer</li>
+            <li><code>decimalPlaces</code> (number): Número de decimales para formatear (default: null = sin formatear)</li>
+            <li><code>refresh</code> (boolean): Si debe refrescar la vista (default: true)</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <p><code>boolean</code> - true si se estableció correctamente</p>
+    </div>
+
+    <div class="note">
+        <h4>Ventajas del Commit Explícito:</h4>
+        <ul>
+            <li>Evita problemas de sobrescritura de valores</li>
+            <li>Asegura que los cambios se guarden en el modelo</li>
+            <li>Útil cuando hay cálculos automáticos configurados</li>
+            <li>Recomendado para operaciones críticas de datos</li>
+        </ul>
+    </div>
+
+    <h3>Navegación en el Grid</h3>
+    <pre><code>// Navegar a celda específica
+apexGridUtils.gotoCell('mi_grid', 'TOTAL', 1); // Primera fila
+apexGridUtils.gotoSelectedCell('mi_grid', 'TOTAL'); // Fila seleccionada
+apexGridUtils.gotoFirstCell('mi_grid', 'TOTAL'); // Primera fila</code></pre>
+
+    <h3>Cálculos y Sumas</h3>
+    <pre><code>// Sumar columna y colocar en item
+let sumaConfig = apexGridUtils.sumColumnToItem('mi_grid', 'TOTAL', 'P1_SUMA_TOTAL', 2, true);
+
+// Suma rápida de columna TOTAL
+apexGridUtils.sumTotalToItem('mi_grid', 'P1_SUMA_TOTAL', 2);
+
+// Configurar listener para recalcular automáticamente
+apexGridUtils.setupGridListener('mi_grid', function() {
+    // Recalcular sumas cuando cambie el grid
+    sumaConfig.calculateSum();
+});</code></pre>
+
+    <h3>Recálculos y Refrescos</h3>
+    <pre><code>// Forzar recálculo de fórmula específica
+apexGridUtils.forceRecalculate('mi_grid', {
+    sourceColumns: ['CANTIDAD', 'PRECIO'],
+    targetColumn: 'TOTAL',
+    formula: function(values) {
+        return values.CANTIDAD * values.PRECIO;
+    },
+    decimalPlaces: 2
+});
+
+// Refrescar grid y recalcular
+apexGridUtils.refreshGridAndRecalculate('mi_grid', {
+    sourceColumns: ['CANTIDAD', 'PRECIO'],
+    targetColumn: 'TOTAL',
+    formula: function(values) {
+        return values.CANTIDAD * values.PRECIO;
+    }
+});
+
+// Refrescar todos los cálculos automáticos
+apexGridUtils.refreshAutoCalculation('mi_grid');</code></pre>
+
+    <h3>Configuraciones Específicas</h3>
+
+    <h4>setupCantidadPorCosto</h4>
+    <p>Configuración rápida para el caso más común: CANTIDAD × COSTO = TOTAL</p>
+    <pre><code>// Configuración automática con valores por defecto
+apexGridUtils.setupCantidadPorCosto('mi_grid');
+
+// Configuración personalizada
+apexGridUtils.setupCantidadPorCosto('mi_grid', 'QTY', 'PRICE', 'SUBTOTAL', 2);</code></pre>
+
+    <h4>ensureAutoCalculation</h4>
+    <p>Verifica y configura cálculos automáticos si no existen</p>
+    <pre><code>// Verificar si existe configuración para TOTAL
+apexGridUtils.ensureAutoCalculation('mi_grid', 'TOTAL');</code></pre>
+
+    <h3>Gestión de Configuraciones</h3>
+    <pre><code>// Obtener configuración específica
+let config = apexGridUtils.getAutoCalculationConfig('mi_grid', 'TOTAL');
+
+// Obtener todas las configuraciones del grid
+let todasConfigs = apexGridUtils.getAutoCalculationConfig('mi_grid');
+
+// Limpiar configuración específica
+apexGridUtils.clearAutoCalculationConfig('mi_grid', 'TOTAL');
+
+// Limpiar todas las configuraciones del grid
+apexGridUtils.clearAutoCalculationConfig('mi_grid');
+
+// Obtener todas las configuraciones almacenadas
+let todas = apexGridUtils.getAllAutoCalculationConfigs();</code></pre>
+
+    <h2 id="insercion-datos"><span class="icon">📥</span>Inserción de Datos</h2>
+
+    <h3>setearDatosIG(configuracion)</h3>
+    <p>Inserta datos en un Interactive Grid con configuración avanzada.</p>
+
+    <pre><code>// Configuración básica con datos directos
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    datos: [
+        { id: 1, nombre: 'Producto A', precio: 100 },
+        { id: 2, nombre: 'Producto B', precio: 200 }
+    ],
+    limpiarAntes: true,
+    refrescar: true,
+    modoEdicion: true
+});
+
+// Configuración con mapeo de campos
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    datos: [
+        { codigo: 'A001', descripcion: 'Producto A', valor: 100 },
+        { codigo: 'A002', descripcion: 'Producto B', valor: 200 }
+    ],
+    mapeo: {
+        'ID': 'codigo',
+        'NOMBRE': 'descripcion',
+        'PRECIO': 'valor'
+    },
+    transformacion: function(registro, indice) {
+        // Agregar fecha de creación
+        registro.fecha_creacion = new Date().toISOString();
+        return registro;
+    },
+    filtro: function(registro, indice) {
+        // Solo insertar productos con valor > 50
+        return registro.valor > 50;
+    },
+    callback: function(resultado) {
+        console.log('Datos insertados:', resultado.procesados);
+    }
+});
+
+// Configuración con datos desde campo de página
+apexGridUtils.setearDatosIG({
+    regionId: 'mi_grid',
+    campoOrigen: 'P1_DATOS_JSON',
+    limpiarAntes: true,
+    refrescar: true
+});</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>configuracion.regionId</code> (string): ID de la región del Interactive Grid</li>
+            <li><code>configuracion.datos</code> (array|object): Datos a insertar (opcional si se usa campoOrigen)</li>
+            <li><code>configuracion.campoOrigen</code> (string): Campo de la página que contiene los datos JSON (opcional si se usa datos)</li>
+            <li><code>configuracion.mapeo</code> (object): Mapeo personalizado de campos {campoDestino: campoOrigen}</li>
+            <li><code>configuracion.transformacion</code> (function): Función para transformar cada registro antes de insertar</li>
+            <li><code>configuracion.filtro</code> (function): Función para filtrar registros antes de insertar</li>
+            <li><code>configuracion.limpiarAntes</code> (boolean): Si debe limpiar datos existentes (default: true)</li>
+            <li><code>configuracion.refrescar</code> (boolean): Si debe refrescar la grilla (default: true)</li>
+            <li><code>configuracion.modoEdicion</code> (boolean): Si debe habilitar modo edición (default: true)</li>
+            <li><code>configuracion.callback</code> (function): Función a ejecutar después de setear datos</li>
+        </ul>
+    </div>
+
+    <div class="return">
+        <h4>Retorna:</h4>
+        <pre><code>{
+    success: true,
+    procesados: 5,
+    errores: 0,
+    total: 5
+}</code></pre>
+    </div>
+
+    <h3>setearDatosDirectos(regionId, datos, limpiar, refrescar, modoEdicion)</h3>
+    <p>Versión simplificada para insertar datos directamente.</p>
+
+    <pre><code>// Insertar datos simples
+let datos = [
+    { ID: 1, NOMBRE: 'Producto A', PRECIO: 100 },
+    { ID: 2, NOMBRE: 'Producto B', PRECIO: 200 }
+];
+
+apexGridUtils.setearDatosDirectos('mi_grid', datos);
+
+// Insertar sin limpiar datos existentes
+apexGridUtils.setearDatosDirectos('mi_grid', datos, false, true, true);</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>regionId</code> (string): ID de la región del Interactive Grid</li>
+            <li><code>datos</code> (array|object): Datos a insertar</li>
+            <li><code>limpiar</code> (boolean): Si debe limpiar datos existentes (default: true)</li>
+            <li><code>refrescar</code> (boolean): Si debe refrescar la grilla (default: true)</li>
+            <li><code>modoEdicion</code> (boolean): Si debe habilitar modo edición (default: true)</li>
+        </ul>
+    </div>
+
+    <h3>setearDatos(regionId, campoOrigen, limpiar, refrescar, modoEdicion)</h3>
+    <p>Inserta datos desde un campo de la página que contiene JSON.</p>
+
+    <pre><code>// Insertar desde campo P1_DATOS_JSON
+apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON');
+
+// Insertar sin limpiar y sin refrescar
+apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON', false, false, true);</code></pre>
+
+    <div class="params">
+        <h4>Parámetros:</h4>
+        <ul>
+            <li><code>regionId</code> (string): ID de la región del Interactive Grid</li>
+            <li><code>campoOrigen</code> (string): Campo de la página que contiene los datos JSON</li>
+            <li><code>limpiar</code> (boolean): Si debe limpiar datos existentes (default: true)</li>
+            <li><code>refrescar</code> (boolean): Si debe refrescar la grilla (default: true)</li>
+            <li><code>modoEdicion</code> (boolean): Si debe habilitar modo edición (default: true)</li>
+        </ul>
+    </div>
+
+    <h2 id="utilidades-generales"><span class="icon">🔧</span>Utilidades Generales</h2>
+
+    <h3>apexUtils.getNumeric(itemName, defaultValue)</h3>
+    <p>Obtiene el valor numérico de un item de APEX, manejando automáticamente el formato europeo.</p>
+
+    <pre><code>// Obtener valor numérico
+let total = apexUtils.getNumeric('P1_TOTAL', 0);
+
+// Versión abreviada
+let total = apexUtils.get('P1_TOTAL', 0);
+
+// Obtener múltiples valores
+let [costo1, costo2] = apexUtils.getMultipleNumeric(['P1_COSTO1', 'P1_COSTO2'], 0);</code></pre>
+
+    <div class="note">
+        <h4>Características:</h4>
+        <ul>
+            <li>Maneja formato europeo (1.234,56 → 1234.56)</li>
+            <li>Convierte automáticamente strings a números</li>
+            <li>Proporciona valor por defecto si la conversión falla</li>
+        </ul>
+    </div>
+
+    <h2 id="ejemplos-uso"><span class="icon">📝</span>Ejemplos de Uso Completos</h2>
+
+    <div class="example">
+        <h4>Ejemplo 1: Factura con Cálculos Automáticos</h4>
+        <pre><code>// Configurar cálculos automáticos para factura
+apexGridUtils.setupAutoCalculation('factura_grid', {
+    sourceColumns: ['CANTIDAD', 'PRECIO_UNITARIO'],
+    targetColumn: 'SUBTOTAL',
+    formula: function(values) {
+        return values.CANTIDAD * values.PRECIO_UNITARIO;
+    },
+    decimalPlaces: 2,
+    autoTrigger: true
+});
+
+// Configurar descuento
+apexGridUtils.setupAutoCalculation('factura_grid', {
+    sourceColumns: ['SUBTOTAL', 'PORCENTAJE_DESCUENTO'],
+    targetColumn: 'DESCUENTO',
+    formula: function(values) {
+        return values.SUBTOTAL * (values.PORCENTAJE_DESCUENTO / 100);
+    },
+    decimalPlaces: 2,
+    autoTrigger: true
+});
+
+// Configurar total final
+apexGridUtils.setupAutoCalculation('factura_grid', {
+    sourceColumns: ['SUBTOTAL', 'DESCUENTO'],
+    targetColumn: 'TOTAL',
+    formula: function(values) {
+        return values.SUBTOTAL - values.DESCUENTO;
+    },
+    decimalPlaces: 2,
+    autoTrigger: true
+});
+
+// Sumar totales automáticamente
+apexGridUtils.sumColumnToItem('factura_grid', 'TOTAL', 'P1_TOTAL_FACTURA', 2, true);</code></pre>
+    </div>
+
+    <div class="example">
+        <h4>Ejemplo 2: Inventario con Validaciones</h4>
+        <pre><code>// Extraer datos con validaciones
+extraerDatosIG({
+    regionId: 'inventario_grid',
+    campos: [
+        { 
+            nombre: 'CODIGO', 
+            alias: 'codigo_producto',
+            obligatorio: true 
+        },
+        { 
+            nombre: 'STOCK', 
+            alias: 'stock_actual',
+            condicion: function(valor) {
+                return valor >= 0; // Solo stock positivo
+            }
+        },
+        { 
+            nombre: 'PRECIO', 
+            alias: 'precio_formateado',
+            transformacion: function(valor) {
+                return new Intl.NumberFormat('es-ES', {
+                    style: 'currency',
+                    currency: 'EUR'
+                }).format(valor);
+            }
+        }
+    ],
+    campoDestino: 'P1_DATOS_INVENTARIO',
+    formatoSalida: 'array',
+    callback: function(datos) {
+        console.log('Datos extraídos:', datos);
+        // Procesar datos adicionales
+    }
+});</code></pre>
+    </div>
+
+    <div class="example">
+        <h4>Ejemplo 3: Formulario Dinámico</h4>
+        <pre><code>// Configurar navegación automática
+function navegarSiguienteCampo() {
+    let campos = ['CODIGO', 'NOMBRE', 'DESCRIPCION', 'PRECIO'];
+    let campoActual = 'CODIGO'; // Campo actual
+    
+    let indiceActual = campos.indexOf(campoActual);
+    let siguienteCampo = campos[indiceActual + 1];
+    
+    if (siguienteCampo) {
+        apexGridUtils.gotoSelectedCell('mi_grid', siguienteCampo);
+    }
+}
+
+// Configurar validación en tiempo real
+apexGridUtils.setupGridListener('mi_grid', function() {
+    let precio = apexGridUtils.getSelectedNumericCellValue('mi_grid', 'PRECIO');
+    let stock = apexGridUtils.getSelectedNumericCellValue('mi_grid', 'STOCK');
+    
+    if (precio < 0) {
+        apex.message.alert('El precio no puede ser negativo');
+    }
+    
+    if (stock < 0) {
+        apex.message.alert('El stock no puede ser negativo');
+    }
+});</code></pre>
+    </div>
+
+    <div class="example">
+        <h4>Ejemplo 4: Carga Masiva de Datos</h4>
+        <pre><code>// Cargar datos desde un archivo JSON o respuesta de API
+let datosProductos = [
+    { codigo: 'P001', descripcion: 'Laptop HP', precio: 1200, stock: 10 },
+    { codigo: 'P002', descripcion: 'Mouse Inalámbrico', precio: 25, stock: 50 },
+    { codigo: 'P003', descripcion: 'Teclado Mecánico', precio: 150, stock: 15 },
+    { codigo: 'P004', descripcion: 'Monitor 24"', precio: 300, stock: 8 }
+];
+
+// Configuración avanzada con mapeo y validaciones
+apexGridUtils.setearDatosIG({
+    regionId: 'productos_grid',
+    datos: datosProductos,
+    mapeo: {
+        'CODIGO': 'codigo',
+        'NOMBRE': 'descripcion',
+        'PRECIO': 'precio',
+        'STOCK': 'stock'
+    },
+    transformacion: function(registro, indice) {
+        // Agregar campos calculados
+        registro.valor_total = registro.precio * registro.stock;
+        registro.fecha_carga = new Date().toISOString();
+        registro.usuario_carga = 'SISTEMA';
+        return registro;
+    },
+    filtro: function(registro, indice) {
+        // Solo cargar productos con stock > 0 y precio > 0
+        return registro.stock > 0 && registro.precio > 0;
+    },
+    limpiarAntes: true,
+    refrescar: true,
+    modoEdicion: true,
+    callback: function(resultado) {
+        console.log(`Carga completada: ${resultado.procesados} productos cargados`);
+        
+        if (resultado.errores > 0) {
+            apex.message.alert(`Se encontraron ${resultado.errores} errores durante la carga`);
+        } else {
+            apex.message.showPageSuccess('Productos cargados exitosamente');
+        }
+        
+        // Configurar cálculos automáticos después de la carga
+        apexGridUtils.setupCantidadPorCosto('productos_grid', 'STOCK', 'PRECIO', 'VALOR_TOTAL', 2);
+    }
+});
+
+// Cargar datos desde un campo de página (útil para datos de procesos APEX)
+function cargarDesdeProceso() {
+    // Ejecutar proceso APEX que retorna JSON
+    apex.server.process('OBTENER_PRODUCTOS', {
+        pageItems: '#P1_CATEGORIA',
+        success: function(data) {
+            // Guardar datos en campo oculto
+            apex.item('P1_DATOS_TEMPORALES').setValue(JSON.stringify(data));
+            
+            // Cargar en grid
+            apexGridUtils.setearDatos('productos_grid', 'P1_DATOS_TEMPORALES');
+        }
+    });
+}
+
+// Carga incremental (sin limpiar datos existentes)
+function agregarProductos() {
+    let nuevosProductos = [
+        { codigo: 'P005', descripcion: 'Auriculares', precio: 80, stock: 20 }
+    ];
+    
+    apexGridUtils.setearDatosDirectos('productos_grid', nuevosProductos, false, true, true);
+}</code></pre>
+    </div>
+
+    <h2 id="casos-aplicacion"><span class="icon">🎯</span>Casos de Aplicación</h2>
+
+    <div class="use-cases">
+        <div class="use-case">
+            <h4>1. Gestión de Inventarios</h4>
+            <ul>
+                <li>Cálculo automático de valores totales</li>
+                <li>Validación de stock mínimo</li>
+                <li>Actualización de precios con IVA</li>
+            </ul>
+        </div>
+
+        <div class="use-case">
+            <h4>2. Facturación</h4>
+            <ul>
+                <li>Cálculo automático de subtotales</li>
+                <li>Aplicación de descuentos</li>
+                <li>Cálculo de impuestos</li>
+            </ul>
+        </div>
+
+        <div class="use-case">
+            <h4>3. Planificación de Proyectos</h4>
+            <ul>
+                <li>Cálculo de horas totales</li>
+                <li>Presupuestos automáticos</li>
+                <li>Seguimiento de recursos</li>
+            </ul>
+        </div>
+
+        <div class="use-case">
+            <h4>4. Gestión de Ventas</h4>
+            <ul>
+                <li>Cálculo de comisiones</li>
+                <li>Análisis de rendimiento</li>
+                <li>Reportes automáticos</li>
+            </ul>
+        </div>
+    </div>
+
+    <h3>Funciones de Utilidad</h3>
+
+    <h4>Normalización de Números</h4>
+    <pre><code>// Normalizar formato europeo a estándar
+let numero = apexGridUtils.normalizeNumber('1.234,56'); // Retorna 1234.56</code></pre>
+
+    <h4>Verificación de Estado</h4>
+    <pre><code>// Verificar si el módulo está inicializado
+if (apexGridUtils.isInitialized()) {
+    console.log('Módulo listo para usar');
+}</code></pre>
+
+    <h2 id="consideraciones"><span class="icon">⚠️</span>Consideraciones Importantes</h2>
+
+    <div class="warning">
+        <h4>Puntos Clave:</h4>
+        <ol>
+            <li><strong>Static ID:</strong> Asegúrate de que los Interactive Grids tengan un Static ID configurado</li>
+            <li><strong>Nombres de Columnas:</strong> Los nombres de columnas deben coincidir exactamente con los definidos en el grid</li>
+            <li><strong>Formato de Números:</strong> La biblioteca maneja automáticamente el formato europeo (1.234,56)</li>
+            <li><strong>Eventos:</strong> Los cálculos automáticos se ejecutan cuando cambian las columnas fuente</li>
+            <li><strong>Rendimiento:</strong> Para grids grandes, considera usar <code>autoTrigger: false</code> y ejecutar cálculos manualmente</li>
+        </ol>
+    </div>
+
+    <h2 id="solucion-problemas"><span class="icon">🐛</span>Solución de Problemas</h2>
+
+    <h3>Error: "Grid no encontrado"</h3>
+    <ul>
+        <li>Verifica que el Static ID del grid sea correcto</li>
+        <li>Asegúrate de que el grid esté completamente cargado antes de ejecutar las funciones</li>
+    </ul>
+
+    <h3>Error: "Columna no encontrada"</h3>
+    <ul>
+        <li>Verifica que el nombre de la columna coincida exactamente</li>
+        <li>Los nombres de columnas son sensibles a mayúsculas/minúsculas</li>
+    </ul>
+
+    <h3>Cálculos no se ejecutan automáticamente</h3>
+    <ul>
+        <li>Verifica que <code>autoTrigger: true</code> esté configurado</li>
+        <li>Asegúrate de que las columnas fuente estén incluidas en <code>sourceColumns</code></li>
+    </ul>
+
+    <h3>Valores no se actualizan correctamente</h3>
+    <ul>
+        <li>Usa <code>setNumericCellValueWithCommit</code> para evitar sobrescrituras</li>
+        <li>Verifica que el grid esté en modo de edición</li>
+        <li>Considera usar <code>refreshGridAndRecalculate</code> después de cambios masivos</li>
+    </ul>
+
+    <div class="note">
+        <h4>Soporte</h4>
+        <p>Para reportar problemas o solicitar nuevas funcionalidades, revisa los logs de la consola del navegador para obtener información detallada sobre errores y el estado de las operaciones.</p>
+    </div>
+
+    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d;">
+        <p><strong>APEX Utils - Biblioteca de Utilidades para Oracle APEX</strong></p>
+        <p>Documentación completa para desarrollo con Interactive Grids</p>
+    </footer>
+
+    <script>
+        // Función para agregar botones de copiado a todos los bloques de código
+        function addCopyButtons() {
+            const codeBlocks = document.querySelectorAll('pre');
+            
+            codeBlocks.forEach((block, index) => {
+                // Crear botón de copiado
+                const copyButton = document.createElement('button');
+                copyButton.className = 'copy-button';
+                copyButton.textContent = 'Copiar';
+                copyButton.setAttribute('data-index', index);
+                
+                // Agregar botón al bloque de código
+                block.appendChild(copyButton);
+                
+                // Agregar evento de clic
+                copyButton.addEventListener('click', function() {
+                    const codeText = block.textContent.replace('Copiar', '').trim();
+                    
+                    // Copiar al portapapeles
+                    navigator.clipboard.writeText(codeText).then(function() {
+                        // Cambiar texto del botón temporalmente
+                        const originalText = copyButton.textContent;
+                        copyButton.textContent = '¡Copiado!';
+                        copyButton.classList.add('copied');
+                        
+                        setTimeout(function() {
+                            copyButton.textContent = originalText;
+                            copyButton.classList.remove('copied');
+                        }, 2000);
+                    }).catch(function(err) {
+                        console.error('Error al copiar: ', err);
+                        // Fallback para navegadores antiguos
+                        const textArea = document.createElement('textarea');
+                        textArea.value = codeText;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        
+                        copyButton.textContent = '¡Copiado!';
+                        copyButton.classList.add('copied');
+                        
+                        setTimeout(function() {
+                            copyButton.textContent = originalText;
+                            copyButton.classList.remove('copied');
+                        }, 2000);
+                    });
+                });
+            });
+        }
+
+        // Función para resaltar sintaxis básica de JavaScript
+        function highlightSyntax() {
+            // Deshabilitado temporalmente para evitar problemas de HTML malformado
+            return;
+        }
+
+        // Función para limpiar resaltado de sintaxis
+        function clearSyntaxHighlighting() {
+            // No es necesario limpiar ya que no se aplica resaltado
+            return;
+        }
+
+        // Ejecutar cuando el DOM esté listo
+        document.addEventListener('DOMContentLoaded', function() {
+            addCopyButtons();
+            // No aplicar resaltado de sintaxis por ahora
+        });
+
+        // Detectar cambios en el modo de impresión
+        if (window.matchMedia) {
+            window.matchMedia('print').addEventListener('change', function(e) {
+                // No es necesario hacer nada ya que no hay resaltado
+            });
+        }
+    </script>
+</body>
+</html> 

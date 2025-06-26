@@ -147,6 +147,87 @@ let valorConDecimales = apexGridUtils.getSelectedNumericCellValueWithDecimals('m
 let valorEntero = apexGridUtils.getSelectedIntegerCellValue('mi_grid', 'TOTAL');
 ```
 
+#### Obtener Valores Numéricos
+
+Estas funciones obtienen valores numéricos de celdas del Interactive Grid, preservando el formato original de los datos y proporcionando valores por defecto si la conversión falla.
+
+##### getNumericCellValue(gridStaticId, columnName, rowIndex, defaultValue)
+
+Obtiene el valor numérico de una celda específica, preservando el formato original de los datos.
+
+```javascript
+// Obtener valor numérico de fila específica
+let valor = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto
+
+// Obtener valor numérico de fila seleccionada
+let valorSeleccionado = apexGridUtils.getSelectedNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Obtener valor numérico de primera fila
+let primerValor = apexGridUtils.getFirstNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Obtener valor con decimales específicos
+let valorConDecimales = apexGridUtils.getNumericCellValueWithDecimals('mi_grid', 'TOTAL', 1, 2, 0); // grid, columna, fila1, 2decimales, valorPorDefecto
+
+// Obtener valor entero
+let valorEntero = apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada, default: -1)
+- `defaultValue` (number): Valor por defecto si no se puede convertir (default: 0)
+
+**Retorna:** `number` - Valor numérico preservando formato original
+
+##### Variantes Disponibles
+
+```javascript
+// Para fila seleccionada
+apexGridUtils.getSelectedNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Para primera fila
+apexGridUtils.getFirstNumericCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+
+// Con decimales específicos
+apexGridUtils.getNumericCellValueWithDecimals('mi_grid', 'TOTAL', 1, 2, 0); // grid, columna, fila1, 2decimales, valorPorDefecto
+apexGridUtils.getSelectedNumericCellValueWithDecimals('mi_grid', 'TOTAL', 2, 0); // grid, columna, 2decimales, valorPorDefecto
+apexGridUtils.getFirstNumericCellValueWithDecimals('mi_grid', 'TOTAL', 2, 0); // grid, columna, 2decimales, valorPorDefecto
+
+// Valores enteros
+apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto
+apexGridUtils.getSelectedIntegerCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+apexGridUtils.getFirstIntegerCellValue('mi_grid', 'TOTAL', 0); // grid, columna, valorPorDefecto
+```
+
+**Características:**
+- Preserva el formato original de los datos (europeo o estándar)
+- Convierte strings a números de forma segura
+- Proporciona valor por defecto si la conversión falla
+- Preserva decimales exactos cuando es posible
+- Funciona con valores nulos, undefined o vacíos
+
+**Ejemplo: Preservación de Formatos**
+
+```javascript
+// El grid contiene valores en diferentes formatos
+// Fila 1: "1.234,56" (formato europeo)
+// Fila 2: "1234.56" (formato estándar)
+// Fila 3: "1234" (entero)
+// Fila 4: "" (vacío)
+
+let valor1 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto → 1.234,56 (preserva formato)
+let valor2 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 2, 0); // grid, columna, fila2, valorPorDefecto → 1234.56 (preserva formato)
+let valor3 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 3, 0); // grid, columna, fila3, valorPorDefecto → 1234
+let valor4 = apexGridUtils.getNumericCellValue('mi_grid', 'TOTAL', 4, 0); // grid, columna, fila4, valorPorDefecto → 0 (valor por defecto)
+
+// Con decimales específicos
+let valorFormateado = apexGridUtils.getNumericCellValueWithDecimals('mi_grid', 'TOTAL', 1, 2, 0); // grid, columna, fila1, 2decimales, valorPorDefecto → 1234.56
+
+// Como entero
+let valorEntero = apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto → 1235 (redondeado)
+```
+
 #### Establecer Valores
 
 ```javascript
@@ -162,6 +243,41 @@ apexGridUtils.setSelectedNumericCellValue('mi_grid', 'TOTAL', 150.50, 2);
 // Establecer valor con commit explícito (evita sobrescritura)
 apexGridUtils.setSelectedNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
 ```
+
+#### Establecer Valores con Commit Explícito
+
+Estas funciones realizan un commit explícito después de establecer el valor, lo que ayuda a evitar problemas de sobrescritura y asegura que los cambios se guarden correctamente en el modelo del grid.
+
+##### setNumericCellValueWithCommit(gridStaticId, columnName, rowIndex, value, decimalPlaces, refresh)
+
+Establece un valor numérico en una celda específica con commit explícito.
+
+```javascript
+// Establecer valor en fila específica con commit
+apexGridUtils.setNumericCellValueWithCommit('mi_grid', 'TOTAL', 1, 150.50, 2, true);
+
+// Establecer valor en fila seleccionada con commit
+apexGridUtils.setSelectedNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
+
+// Establecer valor en primera fila con commit
+apexGridUtils.setFirstNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+- `value` (number): Valor numérico a establecer
+- `decimalPlaces` (number): Número de decimales para formatear (default: null = sin formatear)
+- `refresh` (boolean): Si debe refrescar la vista (default: true)
+
+**Retorna:** `boolean` - true si se estableció correctamente
+
+**Ventajas del Commit Explícito:**
+- Evita problemas de sobrescritura de valores
+- Asegura que los cambios se guarden en el modelo
+- Útil cuando hay cálculos automáticos configurados
+- Recomendado para operaciones críticas de datos
 
 ### Navegación en el Grid
 
