@@ -540,269 +540,320 @@ function actualizarCostoYRecalcular() {
 
 #### commitGridChanges(gridStaticId, commitAll, forceDirty)
 
-Confirma los cambios en el modelo del grid sin refrescar la vista, forzando el estado "dirty" si es necesario.
+Confirma cambios en el modelo del grid sin refrescar la vista.
 
 ```javascript
-// Confirmar todos los cambios con estado dirty forzado
+// Confirmar todos los cambios
 apexGridUtils.commitGridChanges('mi_grid', true, true);
 
 // Confirmar solo el registro seleccionado
 apexGridUtils.commitGridChanges('mi_grid', false, true);
-
-// Confirmar sin forzar estado dirty
-apexGridUtils.commitGridChanges('mi_grid', true, false);
 ```
 
 **Parámetros:**
 - `gridStaticId` (string): Static ID del Interactive Grid
-- `commitAll` (boolean): Si debe confirmar todos los registros (default: true)
+- `commitAll` (boolean): Si debe hacer commit de todos los registros (default: true)
 - `forceDirty` (boolean): Si debe forzar el estado dirty antes de confirmar (default: true)
 
 **Retorna:** `boolean` - true si se confirmaron correctamente
 
-### Funciones con Estado Dirty
+## 🎯 Sistema de Re-enfoque Automático de Celdas
 
-#### forceRecordDirty(gridStaticId, rowIndex)
+### Descripción
 
-Fuerza el estado "dirty" de un registro para que APEX lo reconozca como modificado.
+El sistema de re-enfoque automático permite que cuando el usuario cambie entre ventanas o aplicaciones y regrese al navegador, el foco se restaure automáticamente en la última celda del Interactive Grid que tenía seleccionada. Esto mejora significativamente la experiencia del usuario al trabajar con múltiples ventanas.
+
+### Características
+
+- ✅ **Captura automática**: Detecta cuando el usuario hace foco en una celda del Interactive Grid
+- ✅ **Restauración inteligente**: Restaura el foco cuando vuelves a la ventana del navegador
+- ✅ **Manejo de errores**: Gestiona casos donde la celda ya no existe o no es válida
+- ✅ **Inicialización automática**: Se activa automáticamente al cargar el módulo
+- ✅ **Control manual**: Permite habilitar/deshabilitar el sistema según necesidades
+
+### Funciones Disponibles
+
+#### initializeFocusRestoration(enable)
+
+Inicializa o configura el sistema de re-enfoque automático.
 
 ```javascript
-// Forzar estado dirty en la fila seleccionada
-apexGridUtils.forceRecordDirty('mi_grid', -1);
+// Habilitar el sistema (por defecto)
+apexGridUtils.initializeFocusRestoration(true);
 
-// Forzar estado dirty en la primera fila
-apexGridUtils.forceRecordDirty('mi_grid', 1);
-
-// Forzar estado dirty en la tercera fila
-apexGridUtils.forceRecordDirty('mi_grid', 3);
+// Deshabilitar el sistema
+apexGridUtils.initializeFocusRestoration(false);
 ```
 
 **Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+- `enable` (boolean): Si debe habilitar el sistema (default: true)
 
-**Retorna:** `boolean` - true si se marcó correctamente
+**Retorna:** `boolean` - true si se configuró correctamente
 
-#### forceDirtyState(model, targetRow, columnName)
+#### enableFocusRestoration()
 
-Función interna mejorada que fuerza el estado "dirty" usando múltiples métodos de APEX.
+Habilita el sistema de re-enfoque automático.
 
 ```javascript
-// Usar directamente con modelo y registro
-const grid = apex.region('mi_grid').call("getViews").grid;
-const model = grid.model;
-const record = grid.getSelectedRecords()[0][1];
-
-apexGridUtils.forceDirtyState(model, record, 'COSTO');
+// Habilitar el sistema
+apexGridUtils.enableFocusRestoration();
 ```
 
-**Parámetros:**
-- `model` (object): Modelo del grid
-- `targetRow` (object): Registro objetivo
-- `columnName` (string): Nombre de la columna (opcional)
+**Retorna:** `boolean` - true si se habilitó correctamente
 
-**Retorna:** `boolean` - true si se marcó correctamente usando al menos un método
+#### disableFocusRestoration()
 
-#### setCellValueWithDirty(gridStaticId, columnName, rowIndex, value, refresh, forceDirty)
-
-Setea un valor en una celda específica y automáticamente fuerza el estado dirty.
+Deshabilitar el sistema de re-enfoque automático.
 
 ```javascript
-// Setear valor con estado dirty forzado (formato europeo)
-apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 1.500,50, true, true);
-
-// Setear valor sin forzar estado dirty (formato europeo)
-apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 1.500,50, true, false);
-
-// Setear valor sin refrescar vista (formato europeo)
-apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 1.500,50, false, true);
+// Deshabilitar el sistema
+apexGridUtils.disableFocusRestoration();
 ```
 
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columnName` (string): Nombre de la columna
-- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
-- `value` (any): Valor a establecer
-- `refresh` (boolean): Si debe refrescar la vista (default: true)
-- `forceDirty` (boolean): Si debe forzar el estado dirty (default: true)
+**Retorna:** `boolean` - true si se deshabilitó correctamente
 
-**Retorna:** `boolean` - true si se estableció correctamente
+#### getLastFocusedCell()
 
-#### setSelectedCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)
-
-Setea un valor en la fila seleccionada con estado dirty forzado.
+Obtiene la última celda que tuvo el foco.
 
 ```javascript
-// Setear valor en fila seleccionada con estado dirty (formato europeo)
-apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 1.750,25);
+// Obtener la última celda enfocada
+const lastCell = apexGridUtils.getLastFocusedCell();
 
-// Setear valor sin refrescar (formato europeo)
-apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 1.750,25, false, true);
-```
-
-#### setFirstCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)
-
-Setea un valor en la primera fila con estado dirty forzado.
-
-```javascript
-// Setear valor en primera fila con estado dirty (formato europeo)
-apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 1.000,00);
-
-// Setear valor sin forzar estado dirty (formato europeo)
-apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 1.000,00, true, false);
-```
-
-### Solución al Problema de Confirmación
-
-**Problema:** Los cambios programáticos no se confirman automáticamente porque APEX no marca los registros como "dirty".
-
-**Solución:** Usar las funciones con estado dirty forzado:
-
-```javascript
-// ❌ Código que NO funciona (no se confirma automáticamente)
-apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, 1.500,50, true);
-apexGridUtils.commitGridChanges('DetallesP');
-
-// ✅ Código que SÍ funciona (se confirma automáticamente)
-apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, 1.500,50, true, true);
-apexGridUtils.commitGridChanges('DetallesP', true, true);
-
-// ✅ Alternativa: Forzar estado dirty manualmente
-apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, 1.500,50, true);
-apexGridUtils.forceRecordDirty('DetallesP', 1);
-apexGridUtils.commitGridChanges('DetallesP');
-```
-
-**Casos de Uso:**
-
-```javascript
-// Después de modificar valores programáticamente (formato europeo)
-let nuevoCosto = calcularNuevoCosto();
-apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, nuevoCosto, true, true);
-
-// Confirmar cambios inmediatamente
-apexGridUtils.commitGridChanges('DetallesP', true, true);
-
-// Para operaciones masivas (formato europeo)
-function actualizarCostosMasivamente() {
-    let costos = obtenerNuevosCostos();
-    
-    costos.forEach((costo, index) => {
-        apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', index + 1, costo, false, true);
-    });
-    
-    // Confirmar todos los cambios al final
-    apexGridUtils.commitGridChanges('DetallesP', true, true);
+if (lastCell) {
+    console.log('Última celda enfocada:', lastCell);
+    console.log('Contenido:', lastCell.textContent);
 }
 ```
 
-### Funciones con Estabilización (⭐ NUEVO)
+**Retorna:** `HTMLElement|null` - Elemento de la celda o null si no hay
 
-#### setCellValueWithStabilization(gridStaticId, columnName, rowIndex, value, maxAttempts, delayBetweenAttempts)
+#### setLastFocusedCell(cellElement)
 
-Setea un valor esperando a que se estabilice antes de confirmar cambios. Útil cuando APEX resetea valores automáticamente.
+Establece manualmente la última celda enfocada.
 
 ```javascript
-// Setear valor con estabilización (Promise) - formato europeo
-apexGridUtils.setCellValueWithStabilization('mi_grid', 'COSTO', 1, 1.500,50)
-    .then(success => {
-        if (success) {
-            console.log('Valor establecido correctamente');
-        } else {
-            console.log('Error al establecer valor');
-        }
-    });
+// Establecer manualmente una celda específica
+const cellElement = document.querySelector('.a-GV-cell[data-column="COSTO"]');
+apexGridUtils.setLastFocusedCell(cellElement);
 ```
 
 **Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columnName` (string): Nombre de la columna
-- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
-- `value` (any): Valor a establecer
-- `maxAttempts` (number): Máximo número de intentos (default: 5)
-- `delayBetweenAttempts` (number): Delay entre intentos en ms (default: 200)
-
-**Retorna:** `Promise<boolean>` - Promise que resuelve a true si se estableció correctamente
-
-#### setSelectedCellValueWithStabilization(gridStaticId, columnName, value, maxAttempts, delayBetweenAttempts)
-
-Setea un valor con estabilización en la fila seleccionada.
-
-```javascript
-// Setear valor con estabilización en fila seleccionada
-apexGridUtils.setSelectedCellValueWithStabilization('mi_grid', 'COSTO', 150.50)
-    .then(success => console.log('Completado:', success));
-```
-
-#### setFirstCellValueWithStabilization(gridStaticId, columnName, value, maxAttempts, delayBetweenAttempts)
-
-Setea un valor con estabilización en la primera fila.
-
-```javascript
-// Setear valor con estabilización en primera fila
-apexGridUtils.setFirstCellValueWithStabilization('mi_grid', 'COSTO', 150.50)
-    .then(success => console.log('Completado:', success));
-```
-
-### Funciones con Activación (⭐ NUEVO)
-
-#### simulateUserInteraction(gridStaticId, columnName, rowIndex)
-
-Simula la interacción del usuario para activar el grid antes de establecer valores.
-
-```javascript
-// Simular interacción del usuario
-apexGridUtils.simulateUserInteraction('mi_grid', 'COSTO', 1);
-
-// Simular interacción en fila seleccionada
-apexGridUtils.simulateUserInteraction('mi_grid', 'COSTO', -1);
-```
-
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columnName` (string): Nombre de la columna
-- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
-
-**Retorna:** `boolean` - true si se activó correctamente
-
-#### setCellValueWithActivation(gridStaticId, columnName, rowIndex, value, simulateInteraction)
-
-Setea un valor después de activar el grid simulando interacción del usuario.
-
-```javascript
-// Setear valor con activación automática
-apexGridUtils.setCellValueWithActivation('mi_grid', 'COSTO', 1, 150.50);
-
-// Setear valor sin simular interacción
-apexGridUtils.setCellValueWithActivation('mi_grid', 'COSTO', 1, 150.50, false);
-```
-
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columnName` (string): Nombre de la columna
-- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
-- `value` (any): Valor a establecer
-- `simulateInteraction` (boolean): Si debe simular interacción del usuario (default: true)
+- `cellElement` (HTMLElement): Elemento de la celda del Interactive Grid
 
 **Retorna:** `boolean` - true si se estableció correctamente
 
-#### setSelectedCellValueWithActivation(gridStaticId, columnName, value, simulateInteraction)
+#### restoreFocus(delay)
 
-Setea un valor con activación en la fila seleccionada.
-
-```javascript
-// Setear valor con activación en fila seleccionada
-apexGridUtils.setSelectedCellValueWithActivation('mi_grid', 'COSTO', 150.50);
-```
-
-#### setFirstCellValueWithActivation(gridStaticId, columnName, value, simulateInteraction)
-
-Setea un valor con activación en la primera fila.
+Restaura el foco manualmente en la última celda enfocada.
 
 ```javascript
-// Setear valor con activación en primera fila
-apexGridUtils.setFirstCellValueWithActivation('mi_grid', 'COSTO', 150.50);
+// Restaurar foco con delay por defecto (50ms)
+apexGridUtils.restoreFocus();
+
+// Restaurar foco con delay personalizado
+apexGridUtils.restoreFocus(100);
 ```
+
+**Parámetros:**
+- `delay` (number): Delay en milisegundos antes de restaurar (default: 50)
+
+**Retorna:** `boolean` - true si se restauró correctamente
+
+#### clearLastFocusedCell()
+
+Limpia la referencia de la última celda enfocada.
+
+```javascript
+// Limpiar referencia de última celda
+apexGridUtils.clearLastFocusedCell();
+```
+
+#### getFocusRestorationStatus()
+
+Obtiene el estado completo del sistema de re-enfoque.
+
+```javascript
+// Obtener estado del sistema
+const status = apexGridUtils.getFocusRestorationStatus();
+
+console.log('Sistema habilitado:', status.enabled);
+console.log('Hay celda enfocada:', status.hasLastFocusedCell);
+console.log('Información de celda:', status.cellInfo);
+```
+
+**Retorna:** `object` - Objeto con el estado del sistema
+```javascript
+{
+    enabled: true,
+    lastFocusedCell: HTMLElement,
+    hasLastFocusedCell: true,
+    cellInfo: {
+        tagName: 'TD',
+        className: 'a-GV-cell a-GV-cell--editable',
+        id: 'cell_123',
+        textContent: '1.234,56'
+    }
+}
+```
+
+### Uso Automático
+
+El sistema se inicializa automáticamente cuando se carga el módulo `apexGridUtils`. No necesitas hacer nada adicional:
+
+1. **El usuario hace foco** en una celda del Interactive Grid
+2. **Cambia a otra ventana** o aplicación
+3. **Vuelve a la ventana** del navegador
+4. **El foco se restaura automáticamente** en la última celda
+
+### Ejemplos de Uso
+
+#### Ejemplo Básico
+
+```javascript
+// El sistema funciona automáticamente, pero puedes verificar su estado
+const status = apexGridUtils.getFocusRestorationStatus();
+console.log('Sistema de re-enfoque:', status.enabled ? 'Habilitado' : 'Deshabilitado');
+```
+
+#### Ejemplo con Control Manual
+
+```javascript
+// Deshabilitar temporalmente el sistema
+apexGridUtils.disableFocusRestoration();
+
+// Realizar operaciones que no quieres que interfieran con el foco
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.500,50);
+
+// Rehabilitar el sistema
+apexGridUtils.enableFocusRestoration();
+```
+
+#### Ejemplo con Restauración Manual
+
+```javascript
+// Después de una operación programática, restaurar foco manualmente
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.500,50);
+apexGridUtils.restoreFocus(100); // Restaurar con 100ms de delay
+```
+
+#### Ejemplo con Debug
+
+```javascript
+// Verificar qué celda tiene el foco actualmente
+const lastCell = apexGridUtils.getLastFocusedCell();
+if (lastCell) {
+    console.log('Celda actual:', {
+        contenido: lastCell.textContent,
+        columna: lastCell.getAttribute('data-column'),
+        fila: lastCell.getAttribute('data-row')
+    });
+}
+```
+
+### Casos de Uso Comunes
+
+#### 1. Trabajo con Múltiples Ventanas
+
+```javascript
+// El usuario está editando una celda en el grid
+// Cambia a Excel para copiar un valor
+// Vuelve al navegador → El foco se restaura automáticamente
+```
+
+#### 2. Integración con Otras Aplicaciones
+
+```javascript
+// El usuario está en una celda del grid
+// Abre una calculadora externa
+// Regresa al navegador → Continúa editando donde se quedó
+```
+
+#### 3. Control Programático
+
+```javascript
+// Deshabilitar temporalmente durante operaciones masivas
+apexGridUtils.disableFocusRestoration();
+
+// Realizar múltiples cambios
+for (let i = 1; i <= 10; i++) {
+    apexGridUtils.setCellValue('mi_grid', 'COSTO', i, i * 100);
+}
+
+// Rehabilitar y restaurar foco
+apexGridUtils.enableFocusRestoration();
+apexGridUtils.restoreFocus();
+```
+
+### Configuración Avanzada
+
+#### Personalizar el Delay de Restauración
+
+```javascript
+// Restaurar foco con delay personalizado para casos especiales
+apexGridUtils.restoreFocus(200); // 200ms de delay
+```
+
+#### Verificar Estado del Sistema
+
+```javascript
+// Verificar si el sistema está funcionando correctamente
+const status = apexGridUtils.getFocusRestorationStatus();
+
+if (!status.enabled) {
+    console.warn('Sistema de re-enfoque deshabilitado');
+    apexGridUtils.enableFocusRestoration();
+}
+
+if (!status.hasLastFocusedCell) {
+    console.log('No hay celda enfocada registrada');
+}
+```
+
+### Solución de Problemas
+
+#### El foco no se restaura
+
+```javascript
+// Verificar si el sistema está habilitado
+const status = apexGridUtils.getFocusRestorationStatus();
+console.log('Estado del sistema:', status);
+
+// Rehabilitar si es necesario
+if (!status.enabled) {
+    apexGridUtils.enableFocusRestoration();
+}
+```
+
+#### Restauración manual cuando falla la automática
+
+```javascript
+// Si la restauración automática falla, usar restauración manual
+apexGridUtils.restoreFocus(100);
+```
+
+#### Limpiar referencia corrupta
+
+```javascript
+// Si hay problemas con la celda almacenada
+apexGridUtils.clearLastFocusedCell();
+apexGridUtils.enableFocusRestoration();
+```
+
+### Notas Técnicas
+
+- **Namespaces únicos**: Los eventos usan `.apexGridUtils` para evitar conflictos
+- **Limpieza automática**: Se remueven eventos anteriores antes de agregar nuevos
+- **Manejo de errores**: Captura y maneja errores de foco inválido automáticamente
+- **Delay configurable**: 50ms por defecto para evitar conflictos con otros eventos
+- **Inicialización automática**: Se activa automáticamente al cargar el módulo
+
+### Compatibilidad
+
+- ✅ **APEX 18.1+**: Compatible con todas las versiones modernas
+- ✅ **Interactive Grids**: Funciona con todos los tipos de Interactive Grids
+- ✅ **Múltiples Grids**: Funciona simultáneamente con múltiples grids en la misma página
+- ✅ **Navegadores**: Compatible con Chrome, Firefox, Safari, Edge
 
 ## 🔧 Utilidades Generales
 
@@ -1404,4 +1455,3 @@ apexGridUtils.refreshGridAndRecalculateSimple('DetallesP', 'TOTAL', 100);
 ```
 
 ### Funciones de Confirmación de Cambios
-</rewritten_file>

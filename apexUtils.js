@@ -12,43 +12,6 @@
  * comunes como cálculos automáticos, manipulación de datos, navegación y 
  * gestión de formularios dinámicos.
  * 
- * ⚠️ CONVENCIONES IMPORTANTES:
- * - Formato Europeo Obligatorio: Todas las funciones usan formato europeo (1.234,56)
- * - Sistema de Índices 1-basado: Fila 1 = primera fila, no 0-basado
- * - Separador de miles: Punto (.) | Separador decimal: Coma (,)
- * 
- * Características Principales:
- * - Cálculos automáticos en Interactive Grids
- * - Manejo robusto de formato europeo (1.234,56)
- * - Funciones de refresco seguras (sin borrar datos)
- * - Extracción y inserción de datos avanzada
- * - Navegación programática en grids
- * - Sistema de debounce para optimización
- * - API limpia y bien documentada
- * 
- * Uso:
- * 1. Incluir este archivo en tu aplicación APEX
- * 2. El módulo se inicializa automáticamente
- * 3. Usar las funciones globales disponibles
- * 
- * Ejemplo básico:
- * ```javascript
- * // Configurar cálculo automático
- * apexGridUtils.setupAutoCalculation('mi_grid', {
- *     sourceColumns: ['CANTIDAD', 'PRECIO'],
- *     targetColumn: 'TOTAL',
- *     formula: function(values) {
- *         return values.CANTIDAD * values.PRECIO;
- *     }
- * });
- * 
- * // Obtener valor numérico
- * let total = apexUtils.get('P1_TOTAL', 0);
- * 
- * // Setear valor (formato europeo, índice 1-basado)
- * apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.234,56);
- * ```
- * 
  * Documentación completa: README.md
  * Changelog: CHANGELOG.md
  * 
@@ -2027,9 +1990,14 @@ window.apexGridUtils = (function() {
         setCellValueRobust: setCellValueRobust,
         setSelectedCellValueRobust: setSelectedCellValueRobust,
         setFirstCellValueRobust: setFirstCellValueRobust,
-        setupWebKitAutoFocus: setupWebKitAutoFocus,
-        isWebKitOnLinux: isWebKitOnLinux,
-        setupAutoFocusIfNeeded: setupAutoFocusIfNeeded
+        initializeFocusRestoration: initializeFocusRestoration,
+        enableFocusRestoration: enableFocusRestoration,
+        disableFocusRestoration: disableFocusRestoration,
+        getLastFocusedCell: getLastFocusedCell,
+        setLastFocusedCell: setLastFocusedCell,
+        restoreFocus: restoreFocus,
+        clearLastFocusedCell: clearLastFocusedCell,
+        getFocusRestorationStatus: getFocusRestorationStatus
     };
 
     // Inicializar el módulo automáticamente
@@ -4438,218 +4406,157 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
         return setCellValueRobust(gridStaticId, columnName, 1, value, refresh, maxRetries);
     }
 
+    // =============================================================================
+    // SISTEMA DE RE-ENFOQUE AUTOMÁTICO DE CELDAS
+    // =============================================================================
+    
+    // Variable global para almacenar la última celda con foco
+    let lastFocusedCell = null;
+    let focusRestorationEnabled = true;
+
     /**
-     * Configurar autofocus para WebKit en sistemas Linux
-     * Esta función ayuda a mantener el foco en las celdas del Interactive Grid
-     * cuando se cambia entre ventanas en navegadores WebKit (Chrome, Safari, etc.)
-     * en sistemas operativos Linux.
-     * 
-     * Uso:
-     * apexGridUtils.setupWebKitAutoFocus();
+     * Inicializar el sistema de re-enfoque automático
+     * @param {boolean} enable - Si debe habilitar el sistema (default: true)
      */
-    function setupWebKitAutoFocus() {
+    function initializeFocusRestoration(enable = true) {
         try {
-            console.log('🔧 apexGridUtils: Configurando autofocus para WebKit en Linux');
+            focusRestorationEnabled = enable;
             
-            // Variable global para almacenar la última celda con foco
-            window.lastFocusedCell = null;
-            
-            // Detectar cuando una celda del Interactive Grid recibe foco
-            $(document).on('focusin', '.a-GV-cell', function () {
-                window.lastFocusedCell = this;
-                console.log('🎯 apexGridUtils: Celda con foco detectada:', this);
-            });
-            
-            // Cuando vuelve el foco al navegador, intenta restaurar el enfoque
-            $(window).on('focus', function () {
-                if (window.lastFocusedCell) {
-                    console.log('🔄 apexGridUtils: Restaurando foco a celda anterior');
-                    setTimeout(() => {
-                        try {
-                            window.lastFocusedCell.focus();
-                            console.log('✅ apexGridUtils: Foco restaurado exitosamente');
-                        } catch (focusError) {
-                            console.warn('apexGridUtils: Error al restaurar foco:', focusError);
-                        }
-                    }, 50); // pequeño retraso para evitar conflictos
-                }
-            });
-            
-            // También manejar el evento blur para detectar cuando se pierde el foco
-            $(document).on('focusout', '.a-GV-cell', function () {
-                // Solo actualizar si no es el mismo elemento que está recibiendo foco
-                if (window.lastFocusedCell !== this) {
-                    window.lastFocusedCell = this;
-                    console.log('📤 apexGridUtils: Celda perdió foco:', this);
-                }
-            });
-            
-            // Función para limpiar el foco almacenado
-            window.clearLastFocusedCell = function() {
-                window.lastFocusedCell = null;
-                console.log('🧹 apexGridUtils: Foco almacenado limpiado');
-            };
-            
-            // Función para forzar el foco en la última celda conocida
-            window.restoreLastFocus = function() {
-                if (window.lastFocusedCell) {
-                    try {
-                        window.lastFocusedCell.focus();
-                        console.log('✅ apexGridUtils: Foco restaurado manualmente');
-                        return true;
-                    } catch (error) {
-                        console.warn('apexGridUtils: Error al restaurar foco manualmente:', error);
-                        return false;
+            if (enable) {
+                /* console.log('apexGridUtils: Sistema de re-enfoque automático inicializado'); */
+                
+                // Captura el foco cuando el usuario está dentro del IG
+                $(document).off('focusin.apexGridUtils').on('focusin.apexGridUtils', '.a-GV-cell', function () {
+                    lastFocusedCell = this;
+                    /* console.log('apexGridUtils: Celda enfocada capturada:', this); */
+                });
+
+                // Cuando vuelve el foco al navegador, intenta restaurar el enfoque
+                $(window).off('focus.apexGridUtils').on('focus.apexGridUtils', function () {
+                    if (lastFocusedCell && focusRestorationEnabled) {
+                        setTimeout(() => {
+                            try {
+                                lastFocusedCell.focus();
+                                /* console.log('apexGridUtils: Foco restaurado en celda'); */
+                            } catch (error) {
+                                console.warn('apexGridUtils: Error al restaurar foco:', error);
+                                lastFocusedCell = null; // Limpiar referencia inválida
+                            }
+                        }, 50); // pequeño retraso para evitar conflictos
                     }
-                } else {
-                    console.warn('apexGridUtils: No hay celda con foco almacenada');
-                    return false;
-                }
-            };
+                });
+                
+                console.log('apexGridUtils: Eventos de re-enfoque configurados');
+            } else {
+                // Deshabilitar el sistema
+                $(document).off('focusin.apexGridUtils');
+                $(window).off('focus.apexGridUtils');
+                lastFocusedCell = null;
+                /* console.log('apexGridUtils: Sistema de re-enfoque automático deshabilitado'); */
+            }
             
-            console.log('✅ apexGridUtils: Autofocus para WebKit configurado correctamente');
             return true;
             
         } catch (error) {
-            console.error('apexGridUtils setupWebKitAutoFocus error:', error);
+            console.error('apexGridUtils initializeFocusRestoration error:', error);
             return false;
         }
     }
 
     /**
-     * Detectar si el navegador es WebKit y el sistema operativo es Linux
-     * @returns {boolean} - true si es WebKit en Linux
+     * Habilitar el sistema de re-enfoque automático
      */
-    function isWebKitOnLinux() {
-        try {
-            const userAgent = navigator.userAgent.toLowerCase();
-            const isWebKit = /webkit/.test(userAgent) && !/chrome/.test(userAgent);
-            const isLinux = /linux/.test(userAgent);
-            
-            console.log('🔍 apexGridUtils: Detección de entorno:', {
-                userAgent: navigator.userAgent,
-                isWebKit: isWebKit,
-                isLinux: isLinux,
-                isWebKitOnLinux: isWebKit && isLinux
-            });
-            
-            return isWebKit && isLinux;
-        } catch (error) {
-            console.error('apexGridUtils isWebKitOnLinux error:', error);
+    function enableFocusRestoration() {
+        return initializeFocusRestoration(true);
+    }
+
+    /**
+     * Deshabilitar el sistema de re-enfoque automático
+     */
+    function disableFocusRestoration() {
+        return initializeFocusRestoration(false);
+    }
+
+    /**
+     * Obtener la última celda enfocada
+     * @returns {HTMLElement|null} - Elemento de la celda o null si no hay
+     */
+    function getLastFocusedCell() {
+        return lastFocusedCell;
+    }
+
+    /**
+     * Establecer manualmente la última celda enfocada
+     * @param {HTMLElement} cellElement - Elemento de la celda
+     */
+    function setLastFocusedCell(cellElement) {
+        if (cellElement && cellElement.classList && cellElement.classList.contains('a-GV-cell')) {
+            lastFocusedCell = cellElement;
+            /* console.log('apexGridUtils: Última celda enfocada establecida manualmente'); */
+            return true;
+        } else {
+            console.warn('apexGridUtils: Elemento no es una celda válida del Interactive Grid');
             return false;
         }
     }
 
     /**
-     * Configurar autofocus automáticamente si se detecta WebKit en Linux
-     * @returns {boolean} - true si se configuró automáticamente
+     * Restaurar el foco manualmente
+     * @param {number} delay - Delay en milisegundos antes de restaurar (default: 50)
+     * @returns {boolean} - true si se restauró correctamente
      */
-    function setupAutoFocusIfNeeded() {
+    function restoreFocus(delay = 50) {
         try {
-            if (isWebKitOnLinux()) {
-                console.log('🔧 apexGridUtils: Detectado WebKit en Linux, configurando autofocus automáticamente');
-                return setupWebKitAutoFocus();
+            if (lastFocusedCell && focusRestorationEnabled) {
+                setTimeout(() => {
+                    try {
+                        lastFocusedCell.focus();
+                        /* console.log('apexGridUtils: Foco restaurado manualmente'); */
+                        return true;
+                    } catch (error) {
+                        console.warn('apexGridUtils: Error al restaurar foco manualmente:', error);
+                        lastFocusedCell = null;
+                        return false;
+                    }
+                }, delay);
+                return true;
             } else {
-                console.log('ℹ️ apexGridUtils: No es WebKit en Linux, autofocus no necesario');
+                console.warn('apexGridUtils: No hay celda enfocada para restaurar o el sistema está deshabilitado');
                 return false;
             }
         } catch (error) {
-            console.error('apexGridUtils setupAutoFocusIfNeeded error:', error);
+            console.error('apexGridUtils restoreFocus error:', error);
             return false;
         }
     }
 
-    // API pública
-    return {
-        setupAutoCalculation: setupAutoCalculation,
-        calculate: calculate,
-        getColumnValue: getColumnValue,
-        setColumnValue: setColumnValue,
-        presetFormulas: presetFormulas,
-        quick: quickSetups,
-        normalizeNumber: normalizeNumber,
-        formatToEuropean: formatToEuropean,
-        toEuropeanFormat: toEuropeanFormat,
-        ensureDecimalFormat: ensureDecimalFormat,
-        sumColumnToItem: sumColumnToItem,
-        sumTotalToItem: sumTotalToItem,
-        gotoCell: gotoCell,
-        gotoFirstCell: gotoFirstCell,
-        gotoSelectedCell: gotoSelectedCell,
-        setCellValue: setCellValue,
-        setSelectedCellValue: setSelectedCellValue,
-        setFirstCellValue: setFirstCellValue,
-        getCellValue: getCellValue,
-        getSelectedCellValue: getSelectedCellValue,
-        getFirstCellValue: getFirstCellValue,
-        getNumericCellValue: getNumericCellValue,
-        getSelectedNumericCellValue: getSelectedNumericCellValue,
-        getFirstNumericCellValue: getFirstNumericCellValue,
-        getNumericCellValueWithDecimals: getNumericCellValueWithDecimals,
-        getIntegerCellValue: getIntegerCellValue,
-        getSelectedIntegerCellValue: getSelectedIntegerCellValue,
-        getFirstIntegerCellValue: getFirstIntegerCellValue,
-        getSelectedNumericCellValueWithDecimals: getSelectedNumericCellValueWithDecimals,
-        getFirstNumericCellValueWithDecimals: getFirstNumericCellValueWithDecimals,
-        setNumericCellValue: setNumericCellValue,
-        setSelectedNumericCellValue: setSelectedNumericCellValue,
-        setFirstNumericCellValue: setFirstNumericCellValue,
-        setIntegerCellValue: setIntegerCellValue,
-        setSelectedIntegerCellValue: setSelectedIntegerCellValue,
-        setFirstIntegerCellValue: setFirstIntegerCellValue,
-        setupGridListener: setupGridListener,
-        setValueAndRecalculate: setValueAndRecalculate,
-        setSelectedValueAndRecalculate: setSelectedValueAndRecalculate,
-        setFirstValueAndRecalculate: setFirstValueAndRecalculate,
-        forceRecalculate: forceRecalculate,
-        refreshGridAndRecalculate: refreshGridAndRecalculate,
-        refreshAutoCalculation: refreshAutoCalculation,
-        getAutoCalculationConfig: getAutoCalculationConfig,
-        clearAutoCalculationConfig: clearAutoCalculationConfig,
-        getAllAutoCalculationConfigs: getAllAutoCalculationConfigs,
-        setupCantidadPorCosto: setupCantidadPorCosto,
-        ensureAutoCalculation: ensureAutoCalculation,
-        isInitialized: isInitialized,
-        initialize: initialize,
-        setNumericCellValueWithCommit: setNumericCellValueWithCommit,
-        setSelectedNumericCellValueWithCommit: setSelectedNumericCellValueWithCommit,
-        setFirstNumericCellValueWithCommit: setFirstNumericCellValueWithCommit,
-        setearDatosIG: setearDatosIG,
-        setearDatosDirectos: setearDatosDirectos,
-        setearDatos: setearDatos,
-        setNumericValueRobust: setNumericValueRobust,
-        setSelectedNumericValueRobust: setSelectedNumericValueRobust,
-        setFirstNumericValueRobust: setFirstNumericValueRobust,
-        setNumericValueEuropean: setNumericValueEuropean,
-        setSelectedNumericValueEuropean: setSelectedNumericValueEuropean,
-        setFirstNumericValueEuropean: setFirstNumericValueEuropean,
-        debugGrid: debugGrid,
-        refreshGrid: refreshGrid,
-        refreshGridAndRecalculateSimple: refreshGridAndRecalculateSimple,
-        commitGridChanges: commitGridChanges,
-        refreshGridViewOnly: refreshGridViewOnly,
-        refreshGridSafe: refreshGridSafe,
-        forceRecordDirty: forceRecordDirty,
-        setCellValueWithDirty: setCellValueWithDirty,
-        setSelectedCellValueWithDirty: setSelectedCellValueWithDirty,
-        setFirstCellValueWithDirty: setFirstCellValueWithDirty,
-        forceDirtyState: forceDirtyState,
-        setCellValueWithStabilization: setCellValueWithStabilization,
-        setSelectedCellValueWithStabilization: setSelectedCellValueWithStabilization,
-        setFirstCellValueWithStabilization: setFirstCellValueWithStabilization,
-        simulateUserInteraction: simulateUserInteraction,
-        setCellValueWithActivation: setCellValueWithActivation,
-        setSelectedCellValueWithActivation: setSelectedCellValueWithActivation,
-        setFirstCellValueWithActivation: setFirstCellValueWithActivation,
-        setCellValueRobust: setCellValueRobust,
-        setSelectedCellValueRobust: setSelectedCellValueRobust,
-        setFirstCellValueRobust: setFirstCellValueRobust,
-        setupWebKitAutoFocus: setupWebKitAutoFocus,
-        isWebKitOnLinux: isWebKitOnLinux,
-        setupAutoFocusIfNeeded: setupAutoFocusIfNeeded
-    };
+    /**
+     * Limpiar la referencia de la última celda enfocada
+     */
+    function clearLastFocusedCell() {
+        lastFocusedCell = null;
+        /* console.log('apexGridUtils: Referencia de última celda enfocada limpiada'); */
+    }
 
-    // Inicializar el módulo automáticamente
-    initialize();
+    /**
+     * Obtener el estado del sistema de re-enfoque
+     * @returns {object} - Objeto con el estado del sistema
+     */
+    function getFocusRestorationStatus() {
+        return {
+            enabled: focusRestorationEnabled,
+            lastFocusedCell: lastFocusedCell,
+            hasLastFocusedCell: lastFocusedCell !== null,
+            cellInfo: lastFocusedCell ? {
+                tagName: lastFocusedCell.tagName,
+                className: lastFocusedCell.className,
+                id: lastFocusedCell.id,
+                textContent: lastFocusedCell.textContent ? lastFocusedCell.textContent.substring(0, 50) + '...' : ''
+            } : null
+        };
+    }
 
-})();
+    // Inicializar automáticamente el sistema de re-enfoque cuando se carga el módulo
+    setTimeout(() => {
+        initializeFocusRestoration(true);
+    }, 100);
