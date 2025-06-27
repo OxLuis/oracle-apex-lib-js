@@ -902,12 +902,37 @@ window.apexGridUtils = (function() {
     }
 
     /**
-     * Navegar a la celda de la fila seleccionada (Versión Mejorada)
+     * Navegar a la celda de la fila seleccionada (Versión Simplificada)
      * @param {string} gridStaticId - Static ID del Interactive Grid
      * @param {string} columnName - Nombre de la columna
+     * @returns {boolean} - true si se navegó correctamente
      */
     function gotoSelectedCell(gridStaticId, columnName) {
-        return gotoCell(gridStaticId, columnName, -1, true);
+        try {
+            console.log(`🎯 apexGridUtils: Navegando a celda seleccionada ${columnName} en ${gridStaticId}`);
+            
+            // Obtener el grid usando el método directo
+            var grid = apex.region(gridStaticId).call("getViews").grid;
+            
+            // Obtener registros seleccionados
+            var array = grid.getSelectedRecords();
+            
+            // Verificar que hay registros seleccionados
+            if (!array || array.length === 0) {
+                console.warn(`apexGridUtils: No hay registros seleccionados en ${gridStaticId}`);
+                return false;
+            }
+            
+            // Navegar a la celda usando el método directo
+            grid.gotoCell(array[0][1], columnName);
+            
+            console.log(`✅ apexGridUtils: Navegación a celda ${columnName} completada`);
+            return true;
+            
+        } catch (error) {
+            console.error('apexGridUtils gotoSelectedCell error:', error);
+            return false;
+        }
     }
 
     /**
