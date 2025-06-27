@@ -20,6 +20,7 @@ Esta biblioteca proporciona un conjunto completo de utilidades para trabajar con
 ## 📋 Tabla de Contenidos
 
 - [Instalación](#instalación)
+- [🆕 Mejoras en Funciones de Seteo de Valores](#-mejoras-en-funciones-de-seteo-de-valores)
 - [Funciones Principales](#funciones-principales)
 - [APEX Grid Utils](#apex-grid-utils)
 - [Inserción de Datos](#inserción-de-datos)
@@ -32,6 +33,114 @@ Esta biblioteca proporciona un conjunto completo de utilidades para trabajar con
 1. Incluir el archivo `apexUtils.js` en tu aplicación APEX
 2. El módulo se inicializa automáticamente al cargar la página
 3. Todas las funciones están disponibles globalmente
+
+## 🆕 Mejoras en Funciones de Seteo de Valores
+
+### Problema Resuelto
+
+Las funciones de seteo de valores han sido completamente reescritas en la versión 1.2.0 basándose en código que funciona correctamente en producción. El problema anterior era que los valores se establecían pero no se mantenían al interactuar con la grilla.
+
+### ⚠️ Convenciones Importantes
+
+#### Formato Europeo (Obligatorio)
+**Todas las funciones de esta biblioteca utilizan formato europeo por defecto:**
+- **Separador de miles**: Punto (`.`)
+- **Separador decimal**: Coma (`,`)
+- **Ejemplo**: `1.234,56` (mil doscientos treinta y cuatro con cincuenta y seis centavos)
+
+```javascript
+// ✅ Formato correcto (europeo)
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.234,56);
+
+// ❌ Formato incorrecto (americano)
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1234.56);
+```
+
+#### Sistema de Índices de Filas
+**El sistema de índices es 1-basado (no 0-basado):**
+- **Fila 1**: Primera fila visible en el grid
+- **Fila 2**: Segunda fila visible en el grid
+- **Fila -1**: Fila seleccionada actualmente
+
+```javascript
+// ✅ Índices correctos
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 150.50);  // Primera fila
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 2, 200.75);  // Segunda fila
+apexGridUtils.setCellValue('mi_grid', 'COSTO', -1, 175.25); // Fila seleccionada
+
+// ❌ Índices incorrectos (0-basado)
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 0, 150.50);  // No funciona
+```
+
+### Cambios Principales
+
+1. **Método de acceso al modelo mejorado**: 
+   - Antes: `apex.region(gridStaticId).call("getViews").grid.model`
+   - Ahora: `apex.region(gridStaticId).widget().interactiveGrid("getCurrentView").model`
+
+2. **Obtención de registros mejorada**:
+   - Uso directo de `getSelectedRecords()` del modelo actual
+   - Iteración más eficiente con `model.forEach()`
+
+3. **SetValue directo y confiable**:
+   - Eliminación de métodos complejos de dirty state
+   - Uso directo de `model.setValue(record, column, value)`
+
+### Funciones Mejoradas
+
+```javascript
+// ✅ Setear valor en celda específica (formato europeo, índice 1-basado)
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.234,56);  // Primera fila
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 2, 2.500,00);  // Segunda fila
+
+// ✅ Setear valor en fila seleccionada
+apexGridUtils.setSelectedCellValue('mi_grid', 'COSTO', 1.750,25);
+
+// ✅ Setear valor en primera fila
+apexGridUtils.setFirstCellValue('mi_grid', 'COSTO', 1.000,00);
+
+// ✅ Obtener valor de celda específica
+let valor = apexGridUtils.getCellValue('mi_grid', 'COSTO', 1);  // Primera fila
+
+// ✅ Navegar a celda específica
+apexGridUtils.gotoCell('mi_grid', 'COSTO', 1);  // Primera fila
+```
+
+### Ejemplo de Uso Completo
+
+```javascript
+// Configurar cálculo automático
+apexGridUtils.setupAutoCalculation('DetallesP', {
+    sourceColumns: ['CANTIDAD', 'COSTO'],
+    targetColumn: 'TOTAL',
+    formula: function(values) {
+        return values.CANTIDAD * values.COSTO;
+    },
+    decimalPlaces: 3
+});
+
+// Setear valores que se mantienen correctamente (formato europeo)
+apexGridUtils.setCellValue('DetallesP', 'CANTIDAD', 1, 10);        // Primera fila
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, 15,500);       // Primera fila
+apexGridUtils.setCellValue('DetallesP', 'CANTIDAD', 2, 5);         // Segunda fila
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 2, 25,750);       // Segunda fila
+
+// El cálculo automático se ejecutará y el valor se mantendrá
+```
+
+### Solución de Problemas
+
+Si los valores no se mantienen al interactuar con la grilla, usar las funciones mejoradas:
+
+```javascript
+// ✅ Usar estas funciones (versión mejorada)
+apexGridUtils.setCellValue('grid_id', 'COSTO', 1, 1.500,50);  // Primera fila
+apexGridUtils.setSelectedCellValue('grid_id', 'COSTO', 1.750,25);
+
+// ❌ Evitar funciones antiguas que pueden no funcionar
+// apexGridUtils.setCellValueWithDirty()
+// apexGridUtils.setCellValueWithStabilization()
+```
 
 ## 🔧 Funciones Principales
 
@@ -107,7 +216,7 @@ extraerDatos('mi_grid', ['ID', 'NOMBRE', 'EMAIL'], 'P1_DATOS');
 Configura cálculos automáticos en Interactive Grids.
 
 ```javascript
-// Configurar multiplicación automática
+// Configurar multiplicación automática (formato europeo)
 apexGridUtils.setupAutoCalculation('mi_grid', {
     sourceColumns: ['CANTIDAD', 'PRECIO'],
     targetColumn: 'TOTAL',
@@ -132,13 +241,13 @@ apexGridUtils.setupAutoCalculation('mi_grid', {
 #### Configuraciones Rápidas
 
 ```javascript
-// Multiplicación simple
+// Multiplicación simple (formato europeo)
 apexGridUtils.quick.multiplyColumns('mi_grid', 'CANTIDAD', 'PRECIO', 'TOTAL', 2);
 
-// Precio con IVA
+// Precio con IVA (formato europeo)
 apexGridUtils.quick.priceWithTax('mi_grid', 'PRECIO_BASE', 'PRECIO_CON_IVA', 10, 2);
 
-// Subtotal con descuento
+// Subtotal con descuento (formato europeo)
 apexGridUtils.quick.subtotalWithDiscount('mi_grid', 'CANTIDAD', 'PRECIO', 'DESCUENTO', 'SUBTOTAL', 2);
 ```
 
@@ -243,73 +352,45 @@ let valorFormateado = apexGridUtils.getNumericCellValueWithDecimals('mi_grid', '
 let valorEntero = apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto → 1235 (redondeado)
 ```
 
-#### Establecer Valores
+#### Setear Valores
 
 ```javascript
-// Establecer valor en celda seleccionada
-apexGridUtils.setSelectedCellValue('mi_grid', 'TOTAL', 150.50);
+// Setear valor en celda específica (formato europeo, índice 1-basado)
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.234,56);  // Primera fila
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 2, 2.500,00);  // Segunda fila
 
-// Establecer valor en primera fila
-apexGridUtils.setFirstCellValue('mi_grid', 'TOTAL', 150.50);
+// Setear valor en fila seleccionada
+apexGridUtils.setSelectedCellValue('mi_grid', 'COSTO', 1.750,25);
 
-// Establecer valor numérico con decimales específicos
-apexGridUtils.setSelectedNumericCellValue('mi_grid', 'TOTAL', 150.50, 2);
+// Setear valor en primera fila
+apexGridUtils.setFirstCellValue('mi_grid', 'COSTO', 1.000,00);
 
-// Establecer valor con commit explícito (evita sobrescritura)
-apexGridUtils.setSelectedNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
+// Setear valores numéricos con formato europeo
+apexGridUtils.setSelectedNumericCellValue('mi_grid', 'COSTO', 1.500,50);
+apexGridUtils.setFirstNumericCellValue('mi_grid', 'COSTO', 2.250,75);
 ```
 
-#### Establecer Valores con Commit Explícito
-
-Estas funciones realizan un commit explícito después de establecer el valor, lo que ayuda a evitar problemas de sobrescritura y asegura que los cambios se guarden correctamente en el modelo del grid.
-
-##### setNumericCellValueWithCommit(gridStaticId, columnName, rowIndex, value, decimalPlaces, refresh)
-
-Establece un valor numérico en una celda específica con commit explícito.
+#### Navegación
 
 ```javascript
-// Establecer valor en fila específica con commit
-apexGridUtils.setNumericCellValueWithCommit('mi_grid', 'TOTAL', 1, 150.50, 2, true);
+// Navegar a celda específica (índice 1 = primera fila)
+apexGridUtils.gotoCell('mi_grid', 'COSTO', 1);  // Primera fila
+apexGridUtils.gotoCell('mi_grid', 'COSTO', 2);  // Segunda fila
 
-// Establecer valor en fila seleccionada con commit
-apexGridUtils.setSelectedNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
+// Navegar a primera celda de columna
+apexGridUtils.gotoFirstCell('mi_grid', 'COSTO');
 
-// Establecer valor en primera fila con commit
-apexGridUtils.setFirstNumericCellValueWithCommit('mi_grid', 'TOTAL', 150.50, 2);
-```
-
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columnName` (string): Nombre de la columna
-- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
-- `value` (number): Valor numérico a establecer
-- `decimalPlaces` (number): Número de decimales para formatear (default: null = sin formatear)
-- `refresh` (boolean): Si debe refrescar la vista (default: true)
-
-**Retorna:** `boolean` - true si se estableció correctamente
-
-**Ventajas del Commit Explícito:**
-- Evita problemas de sobrescritura de valores
-- Asegura que los cambios se guarden en el modelo
-- Útil cuando hay cálculos automáticos configurados
-- Recomendado para operaciones críticas de datos
-
-### Navegación en el Grid
-
-```javascript
-// Navegar a celda específica
-apexGridUtils.gotoCell('mi_grid', 'TOTAL', 1); // Primera fila
-apexGridUtils.gotoSelectedCell('mi_grid', 'TOTAL'); // Fila seleccionada
-apexGridUtils.gotoFirstCell('mi_grid', 'TOTAL'); // Primera fila
+// Navegar a celda seleccionada
+apexGridUtils.gotoSelectedCell('mi_grid', 'COSTO');
 ```
 
 ### Cálculos y Sumas
 
 ```javascript
-// Sumar columna y colocar en item
+// Sumar columna y colocar en item (formato europeo)
 let sumaConfig = apexGridUtils.sumColumnToItem('mi_grid', 'TOTAL', 'P1_SUMA_TOTAL', 2, true);
 
-// Suma rápida de columna TOTAL
+// Suma rápida de columna TOTAL (formato europeo)
 apexGridUtils.sumTotalToItem('mi_grid', 'P1_SUMA_TOTAL', 2);
 
 // Configurar listener para recalcular automáticamente
@@ -324,10 +405,10 @@ apexGridUtils.setupGridListener('mi_grid', function() {
 Suma todos los valores de una columna específica del Interactive Grid y coloca el resultado en un item de APEX.
 
 ```javascript
-// Configuración básica
+// Configuración básica (formato europeo)
 let config = apexGridUtils.sumColumnToItem('mi_grid', 'TOTAL', 'P1_SUMA_TOTAL', 2, true);
 
-// Configuración sin actualización automática
+// Configuración sin actualización automática (formato europeo)
 let configManual = apexGridUtils.sumColumnToItem('mi_grid', 'PRECIO', 'P1_TOTAL_PRECIOS', 2, false);
 
 // Recalcular manualmente
@@ -362,7 +443,7 @@ configManual.calculateSum();
 ### Recálculos y Refrescos
 
 ```javascript
-// Forzar recálculo de fórmula específica
+// Forzar recálculo de fórmula específica (formato europeo)
 apexGridUtils.forceRecalculate('mi_grid', {
     sourceColumns: ['CANTIDAD', 'PRECIO'],
     targetColumn: 'TOTAL',
@@ -372,7 +453,7 @@ apexGridUtils.forceRecalculate('mi_grid', {
     decimalPlaces: 2
 });
 
-// Refrescar grid y recalcular
+// Refrescar grid y recalcular (formato europeo)
 apexGridUtils.refreshGridAndRecalculate('mi_grid', {
     sourceColumns: ['CANTIDAD', 'PRECIO'],
     targetColumn: 'TOTAL',
@@ -433,8 +514,8 @@ apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 200);
 **Casos de Uso:**
 
 ```javascript
-// Después de modificar valores programáticamente
-apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 150.50, false); // sin refresh automático
+// Después de modificar valores programáticamente (formato europeo)
+apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.500,50, false); // sin refresh automático
 apexGridUtils.refreshGrid('mi_grid'); // refrescar manualmente
 
 // Después de cambios masivos de datos
@@ -445,7 +526,7 @@ apexGridUtils.setearDatosIG({
 });
 apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 150); // refrescar y recalcular
 
-// Para resolver problemas de sincronización
+// Para resolver problemas de sincronización (formato europeo)
 function actualizarCostoYRecalcular() {
     let nuevoCosto = calcularNuevoCosto();
     apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, nuevoCosto, false);
@@ -527,14 +608,14 @@ apexGridUtils.forceDirtyState(model, record, 'COSTO');
 Setea un valor en una celda específica y automáticamente fuerza el estado dirty.
 
 ```javascript
-// Setear valor con estado dirty forzado
-apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, true, true);
+// Setear valor con estado dirty forzado (formato europeo)
+apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 1.500,50, true, true);
 
-// Setear valor sin forzar estado dirty
-apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, true, false);
+// Setear valor sin forzar estado dirty (formato europeo)
+apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 1.500,50, true, false);
 
-// Setear valor sin refrescar vista
-apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, false, true);
+// Setear valor sin refrescar vista (formato europeo)
+apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 1.500,50, false, true);
 ```
 
 **Parámetros:**
@@ -552,11 +633,11 @@ apexGridUtils.setCellValueWithDirty('mi_grid', 'COSTO', 1, 150.50, false, true);
 Setea un valor en la fila seleccionada con estado dirty forzado.
 
 ```javascript
-// Setear valor en fila seleccionada con estado dirty
-apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 150.50);
+// Setear valor en fila seleccionada con estado dirty (formato europeo)
+apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 1.750,25);
 
-// Setear valor sin refrescar
-apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 150.50, false, true);
+// Setear valor sin refrescar (formato europeo)
+apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 1.750,25, false, true);
 ```
 
 #### setFirstCellValueWithDirty(gridStaticId, columnName, value, refresh, forceDirty)
@@ -564,11 +645,11 @@ apexGridUtils.setSelectedCellValueWithDirty('mi_grid', 'COSTO', 150.50, false, t
 Setea un valor en la primera fila con estado dirty forzado.
 
 ```javascript
-// Setear valor en primera fila con estado dirty
-apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 150.50);
+// Setear valor en primera fila con estado dirty (formato europeo)
+apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 1.000,00);
 
-// Setear valor sin forzar estado dirty
-apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 150.50, true, false);
+// Setear valor sin forzar estado dirty (formato europeo)
+apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 1.000,00, true, false);
 ```
 
 ### Solución al Problema de Confirmación
@@ -579,15 +660,15 @@ apexGridUtils.setFirstCellValueWithDirty('mi_grid', 'COSTO', 150.50, true, false
 
 ```javascript
 // ❌ Código que NO funciona (no se confirma automáticamente)
-apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, nuevoCosto, true);
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, 1.500,50, true);
 apexGridUtils.commitGridChanges('DetallesP');
 
 // ✅ Código que SÍ funciona (se confirma automáticamente)
-apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, nuevoCosto, true, true);
+apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, 1.500,50, true, true);
 apexGridUtils.commitGridChanges('DetallesP', true, true);
 
 // ✅ Alternativa: Forzar estado dirty manualmente
-apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, nuevoCosto, true);
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, 1.500,50, true);
 apexGridUtils.forceRecordDirty('DetallesP', 1);
 apexGridUtils.commitGridChanges('DetallesP');
 ```
@@ -595,14 +676,14 @@ apexGridUtils.commitGridChanges('DetallesP');
 **Casos de Uso:**
 
 ```javascript
-// Después de modificar valores programáticamente
+// Después de modificar valores programáticamente (formato europeo)
 let nuevoCosto = calcularNuevoCosto();
 apexGridUtils.setCellValueWithDirty('DetallesP', 'COSTO', 1, nuevoCosto, true, true);
 
 // Confirmar cambios inmediatamente
 apexGridUtils.commitGridChanges('DetallesP', true, true);
 
-// Para operaciones masivas
+// Para operaciones masivas (formato europeo)
 function actualizarCostosMasivamente() {
     let costos = obtenerNuevosCostos();
     
@@ -613,6 +694,114 @@ function actualizarCostosMasivamente() {
     // Confirmar todos los cambios al final
     apexGridUtils.commitGridChanges('DetallesP', true, true);
 }
+```
+
+### Funciones con Estabilización (⭐ NUEVO)
+
+#### setCellValueWithStabilization(gridStaticId, columnName, rowIndex, value, maxAttempts, delayBetweenAttempts)
+
+Setea un valor esperando a que se estabilice antes de confirmar cambios. Útil cuando APEX resetea valores automáticamente.
+
+```javascript
+// Setear valor con estabilización (Promise) - formato europeo
+apexGridUtils.setCellValueWithStabilization('mi_grid', 'COSTO', 1, 1.500,50)
+    .then(success => {
+        if (success) {
+            console.log('Valor establecido correctamente');
+        } else {
+            console.log('Error al establecer valor');
+        }
+    });
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+- `value` (any): Valor a establecer
+- `maxAttempts` (number): Máximo número de intentos (default: 5)
+- `delayBetweenAttempts` (number): Delay entre intentos en ms (default: 200)
+
+**Retorna:** `Promise<boolean>` - Promise que resuelve a true si se estableció correctamente
+
+#### setSelectedCellValueWithStabilization(gridStaticId, columnName, value, maxAttempts, delayBetweenAttempts)
+
+Setea un valor con estabilización en la fila seleccionada.
+
+```javascript
+// Setear valor con estabilización en fila seleccionada
+apexGridUtils.setSelectedCellValueWithStabilization('mi_grid', 'COSTO', 150.50)
+    .then(success => console.log('Completado:', success));
+```
+
+#### setFirstCellValueWithStabilization(gridStaticId, columnName, value, maxAttempts, delayBetweenAttempts)
+
+Setea un valor con estabilización en la primera fila.
+
+```javascript
+// Setear valor con estabilización en primera fila
+apexGridUtils.setFirstCellValueWithStabilization('mi_grid', 'COSTO', 150.50)
+    .then(success => console.log('Completado:', success));
+```
+
+### Funciones con Activación (⭐ NUEVO)
+
+#### simulateUserInteraction(gridStaticId, columnName, rowIndex)
+
+Simula la interacción del usuario para activar el grid antes de establecer valores.
+
+```javascript
+// Simular interacción del usuario
+apexGridUtils.simulateUserInteraction('mi_grid', 'COSTO', 1);
+
+// Simular interacción en fila seleccionada
+apexGridUtils.simulateUserInteraction('mi_grid', 'COSTO', -1);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+
+**Retorna:** `boolean` - true si se activó correctamente
+
+#### setCellValueWithActivation(gridStaticId, columnName, rowIndex, value, simulateInteraction)
+
+Setea un valor después de activar el grid simulando interacción del usuario.
+
+```javascript
+// Setear valor con activación automática
+apexGridUtils.setCellValueWithActivation('mi_grid', 'COSTO', 1, 150.50);
+
+// Setear valor sin simular interacción
+apexGridUtils.setCellValueWithActivation('mi_grid', 'COSTO', 1, 150.50, false);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna
+- `rowIndex` (number): Índice de la fila (1 = primera fila, -1 = fila seleccionada)
+- `value` (any): Valor a establecer
+- `simulateInteraction` (boolean): Si debe simular interacción del usuario (default: true)
+
+**Retorna:** `boolean` - true si se estableció correctamente
+
+#### setSelectedCellValueWithActivation(gridStaticId, columnName, value, simulateInteraction)
+
+Setea un valor con activación en la fila seleccionada.
+
+```javascript
+// Setear valor con activación en fila seleccionada
+apexGridUtils.setSelectedCellValueWithActivation('mi_grid', 'COSTO', 150.50);
+```
+
+#### setFirstCellValueWithActivation(gridStaticId, columnName, value, simulateInteraction)
+
+Setea un valor con activación en la primera fila.
+
+```javascript
+// Setear valor con activación en primera fila
+apexGridUtils.setFirstCellValueWithActivation('mi_grid', 'COSTO', 150.50);
 ```
 
 ## 🔧 Utilidades Generales
@@ -1111,3 +1300,108 @@ apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON', false, false, true);
 - `limpiar` (boolean): Si debe limpiar datos existentes (default: true)
 - `refrescar` (boolean): Si debe refrescar la grilla (default: true)
 - `modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
+```
+
+#### refreshGridSafe(gridStaticId, commitChanges, refreshRegion)
+
+Refresca el grid de manera segura, confirmando cambios antes de refrescar para evitar pérdida de datos.
+
+```javascript
+// Refrescar de manera segura (confirma cambios + refresca región)
+apexGridUtils.refreshGridSafe('mi_grid', true, true);
+
+// Refrescar de manera segura solo vista (confirma cambios + solo vista)
+apexGridUtils.refreshGridSafe('mi_grid', true, false);
+
+// Refrescar sin confirmar cambios (equivalente a clearChanges)
+apexGridUtils.refreshGridSafe('mi_grid', false, true);
+
+// Refrescar sin confirmar cambios, solo vista
+apexGridUtils.refreshGridSafe('mi_grid', false, false);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `commitChanges` (boolean): Si debe confirmar cambios antes de refrescar (default: true)
+- `refreshRegion` (boolean): Si debe refrescar también la región completa (default: false)
+
+**Retorna:** `boolean` - true si se refrescó correctamente
+
+**Casos de Uso:**
+
+```javascript
+// Equivalente a tu código: clearChanges() + region().refresh()
+apexGridUtils.refreshGridSafe('DetallesP', false, true);
+//                                    ↑        ↑
+//                              NO confirma  Refresca región
+
+// Refrescar preservando cambios (más seguro)
+apexGridUtils.refreshGridSafe('DetallesP', true, true);
+//                                    ↑        ↑
+//                              Confirma     Refresca región
+
+// Refrescar solo vista preservando cambios
+apexGridUtils.refreshGridSafe('DetallesP', true, false);
+//                                    ↑        ↑
+//                              Confirma     Solo vista
+```
+
+#### refreshGridViewOnly(gridStaticId, commitChanges)
+
+Refresca solo la vista del grid sin recargar datos del servidor, confirmando cambios si es necesario.
+
+```javascript
+// Refrescar solo vista confirmando cambios
+apexGridUtils.refreshGridViewOnly('mi_grid', true);
+
+// Refrescar solo vista sin confirmar cambios
+apexGridUtils.refreshGridViewOnly('mi_grid', false);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `commitChanges` (boolean): Si debe confirmar cambios antes de refrescar (default: true)
+
+**Retorna:** `boolean` - true si se refrescó correctamente
+
+**Casos de Uso:**
+
+```javascript
+// Actualización visual rápida (preserva cambios)
+apexGridUtils.refreshGridViewOnly('DetallesP', true);
+
+// Actualización visual rápida (descarta cambios)
+apexGridUtils.refreshGridViewOnly('DetallesP', false);
+
+// Después de cambios programáticos
+apexGridUtils.setCellValue('DetallesP', 'COSTO', 1, 1.500,50, false);
+apexGridUtils.refreshGridViewOnly('DetallesP', true); // Solo actualizar vista
+```
+
+### Comparación de Funciones de Refresh
+
+| Función | Confirma Cambios | Refresca Región | Velocidad | Uso Recomendado |
+|---------|------------------|-----------------|-----------|-----------------|
+| `refreshGrid()` | ❌ No | ✅ Opcional | ⚡ Rápido | Refresh simple |
+| `refreshGridSafe()` | ✅ Opcional | ✅ Opcional | 🐌 Medio | Refresh seguro |
+| `refreshGridViewOnly()` | ✅ Opcional | ❌ No | ⚡ Muy rápido | Solo vista |
+| `refreshGridAndRecalculateSimple()` | ❌ No | ✅ Sí | 🐌 Lento | Refresh + recálculo |
+
+**Guía de Selección:**
+
+```javascript
+// 🚀 Para actualizaciones visuales rápidas
+apexGridUtils.refreshGridViewOnly('DetallesP', true);
+
+// 🛡️ Para refresh seguro preservando cambios
+apexGridUtils.refreshGridSafe('DetallesP', true, true);
+
+// 🔄 Para refresh simple (equivalente a tu código)
+apexGridUtils.refreshGrid('DetallesP', true);
+
+// 📊 Para refresh con recálculo automático
+apexGridUtils.refreshGridAndRecalculateSimple('DetallesP', 'TOTAL', 100);
+```
+
+### Funciones de Confirmación de Cambios
+</rewritten_file>

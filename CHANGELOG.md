@@ -12,6 +12,47 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ## [1.2.0] - 2024-12-19
 
+### 🚨 MEJORA CRÍTICA - Funciones de Seteo de Valores
+
+#### Problema Resuelto
+- **Problema crítico**: Los valores seteados programáticamente no se mantenían al interactuar con la grilla
+- **Causa raíz**: Métodos incorrectos de acceso al modelo y manejo de registros
+- **Solución**: Reescritura completa basada en código que funciona en producción
+
+#### Funciones Completamente Reescritas
+- **`setCellValue()`**: ✅ Versión mejorada con acceso directo al modelo
+- **`setSelectedCellValue()`**: ✅ Versión mejorada para fila seleccionada
+- **`setFirstCellValue()`**: ✅ Versión mejorada para primera fila
+- **`getCellValue()`**: ✅ Versión mejorada para obtener valores
+- **`getSelectedCellValue()`**: ✅ Versión mejorada para fila seleccionada
+- **`getFirstCellValue()`**: ✅ Versión mejorada para primera fila
+- **`gotoCell()`**: ✅ Versión mejorada para navegación
+- **`gotoFirstCell()`**: ✅ Versión mejorada para primera celda
+- **`gotoSelectedCell()`**: ✅ Versión mejorada para celda seleccionada
+
+#### Cambios Técnicos Principales
+1. **Método de acceso al modelo**:
+   - ❌ Antes: `apex.region(gridStaticId).call("getViews").grid.model`
+   - ✅ Ahora: `apex.region(gridStaticId).widget().interactiveGrid("getCurrentView").model`
+
+2. **Obtención de registros**:
+   - ❌ Antes: `grid.getSelectedRecords()` con formato complejo
+   - ✅ Ahora: `model.getSelectedRecords()` directo
+
+3. **SetValue simplificado**:
+   - ❌ Antes: Métodos complejos de dirty state y estabilización
+   - ✅ Ahora: `model.setValue(record, column, value)` directo
+
+#### Compatibilidad
+- **✅ Retrocompatible**: API de funciones se mantiene igual
+- **✅ Migración automática**: Código existente funciona sin cambios
+- **✅ Mejor rendimiento**: Eliminación de métodos innecesarios
+
+#### Convenciones Importantes Documentadas
+- **Formato Europeo Obligatorio**: Todas las funciones usan formato europeo (1.234,56)
+- **Sistema de Índices 1-basado**: Fila 1 = primera fila, no 0-basado
+- **Documentación Actualizada**: Todos los ejemplos usan formato europeo correcto
+
 ### ✨ Nuevas Funciones
 
 #### Funciones de Refresco de Grid
@@ -82,16 +123,18 @@ y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.h
 
 ### 📚 Documentación
 
-- **Nueva sección**: "Funciones con Estado Dirty" en README
+- **Nueva sección**: "🆕 Mejoras en Funciones de Seteo de Valores" en README
 - **Guía de migración**: Cómo actualizar código existente para usar nuevas funciones
 - **Casos de uso**: Ejemplos prácticos para diferentes escenarios
 - **Solución de problemas**: Guía para el problema de confirmación automática
+- **Documentación técnica**: Explicación detallada de cambios en métodos de acceso
 
 ### 🔄 Compatibilidad
 
 - **Retrocompatible**: Todas las funciones existentes mantienen su API
 - **Nuevas funciones**: Agregadas sin afectar funcionalidad existente
 - **Configuración**: No requiere cambios en configuraciones existentes
+- **Migración automática**: Código existente funciona mejor sin cambios
 
 ## [1.1.0] - 2024-12-18
 
