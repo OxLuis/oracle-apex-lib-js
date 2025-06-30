@@ -4565,42 +4565,72 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
     /**
      * Recalcula y setea valores en una columna de todas las filas del Interactive Grid.
      * @param {string} gridStaticId - Static ID del Interactive Grid
-     * @param {string[]} sourceColumns - Array de nombres de columnas fuente (ej: ['TOTAL'])
-     * @param {string} targetColumn - Columna donde se seteará el resultado
-     * @param {function} formula - Función que recibe (values, record, index) y retorna el valor a setear
-     * @param {number} decimalPlaces - Cantidad de decimales a redondear (default: 2)
+     * @param {string[]|object} sourceColumnsOrConfig - Array de nombres de columnas fuente O objeto de configuración
+     * @param {string} targetColumn - Columna donde se seteará el resultado (solo si se usa formato antiguo)
+     * @param {function} formula - Función que recibe (values, record, index) y retorna el valor a setear (solo si se usa formato antiguo)
+     * @param {number} decimalPlaces - Cantidad de decimales a redondear (default: 2, solo si se usa formato antiguo)
      */
-    function recalculateAllRows(gridStaticId, sourceColumns, targetColumn, formula, decimalPlaces = 2) {
+    function recalculateAllRows(gridStaticId, sourceColumnsOrConfig, targetColumn, formula, decimalPlaces = 2) {
         try {
+            // Detectar si se está usando el nuevo formato (objeto de configuración)
+            let config;
+            if (typeof sourceColumnsOrConfig === 'object' && !Array.isArray(sourceColumnsOrConfig)) {
+                // Nuevo formato: objeto de configuración
+                config = sourceColumnsOrConfig;
+                
+                // Validar parámetros requeridos
+                if (!config.sourceColumns || !config.targetColumn || !config.formula) {
+                    console.error('apexGridUtils: Faltan parámetros requeridos en configuración');
+                    return false;
+                }
+            } else {
+                // Formato antiguo: parámetros separados (mantener compatibilidad)
+                config = {
+                    sourceColumns: sourceColumnsOrConfig,
+                    targetColumn: targetColumn,
+                    formula: formula,
+                    decimalPlaces: decimalPlaces
+                };
+            }
+
             const grid = apex.region(gridStaticId).call("getViews").grid;
             const model = grid.model;
 
+            console.log(`🔄 apexGridUtils: Recalculando todas las filas en ${gridStaticId} -> ${config.targetColumn}`);
+
             let rowIndex = 0;
+            let processedRows = 0;
+            
             model.forEach(function(record) {
                 // Construir objeto de valores fuente
                 const values = {};
-                sourceColumns.forEach(col => {
+                config.sourceColumns.forEach(col => {
                     values[col] = apexGridUtils.normalizeNumber(model.getValue(record, col));
                 });
 
                 // Calcular el nuevo valor usando la fórmula
-                let result = formula(values, record, rowIndex);
+                let result = config.formula(values, record, rowIndex);
 
                 // Redondear a los decimales indicados
+                const decimalPlaces = config.decimalPlaces || 2;
                 result = parseFloat(Number(result).toFixed(decimalPlaces));
 
                 // Setear el valor en la columna destino
-                model.setValue(record, targetColumn, result);
+                model.setValue(record, config.targetColumn, result);
 
                 // Marcar como dirty si corresponde
                 if (model.markDirty) model.markDirty(record);
 
+                processedRows++;
                 rowIndex++;
             });
 
             // Refrescar la vista del grid
             grid.view$.trigger('refresh');
+            
+            console.log(`✅ apexGridUtils: Recalculación completada - ${processedRows} filas procesadas`);
             return true;
+            
         } catch (error) {
             console.error('apexGridUtils.recalculateAllRows error:', error);
             return false;
