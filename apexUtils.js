@@ -1997,7 +1997,8 @@ window.apexGridUtils = (function() {
         setLastFocusedCell: setLastFocusedCell,
         restoreFocus: restoreFocus,
         clearLastFocusedCell: clearLastFocusedCell,
-        getFocusRestorationStatus: getFocusRestorationStatus
+        getFocusRestorationStatus: getFocusRestorationStatus,
+        recalculateAllRows: recalculateAllRows
     };
 
     // Inicializar el módulo automáticamente
@@ -4560,3 +4561,48 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
     setTimeout(() => {
         initializeFocusRestoration(true);
     }, 100);
+
+    /**
+     * Recalcula y setea valores en una columna de todas las filas del Interactive Grid.
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {string[]} sourceColumns - Array de nombres de columnas fuente (ej: ['TOTAL'])
+     * @param {string} targetColumn - Columna donde se seteará el resultado
+     * @param {function} formula - Función que recibe (values, record, index) y retorna el valor a setear
+     * @param {number} decimalPlaces - Cantidad de decimales a redondear (default: 2)
+     */
+    function recalculateAllRows(gridStaticId, sourceColumns, targetColumn, formula, decimalPlaces = 2) {
+        try {
+            const grid = apex.region(gridStaticId).call("getViews").grid;
+            const model = grid.model;
+
+            let rowIndex = 0;
+            model.forEach(function(record) {
+                // Construir objeto de valores fuente
+                const values = {};
+                sourceColumns.forEach(col => {
+                    values[col] = apexGridUtils.normalizeNumber(model.getValue(record, col));
+                });
+
+                // Calcular el nuevo valor usando la fórmula
+                let result = formula(values, record, rowIndex);
+
+                // Redondear a los decimales indicados
+                result = parseFloat(Number(result).toFixed(decimalPlaces));
+
+                // Setear el valor en la columna destino
+                model.setValue(record, targetColumn, result);
+
+                // Marcar como dirty si corresponde
+                if (model.markDirty) model.markDirty(record);
+
+                rowIndex++;
+            });
+
+            // Refrescar la vista del grid
+            grid.view$.trigger('refresh');
+            return true;
+        } catch (error) {
+            console.error('apexGridUtils.recalculateAllRows error:', error);
+            return false;
+        }
+    }
