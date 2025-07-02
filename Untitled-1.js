@@ -659,24 +659,34 @@ window.apexGridUtils = (function() {
             
             // Función para calcular la suma
             const calculateSum = function() {
-                let total = 0;
-                
-                model.forEach(function(record, index, id) {
-                     // ✅ ¡PUNTO CLAVE!
-                     // Ignorar los registros marcados para eliminación en la suma.
-                    if (isRecordMarkedForDeletion(record, model)) {
-                        return; // Siguiente registro
-                    }
+                try {
+                    let total = 0;
+                    let validRecords = 0;
                     
-                    const value = model.getValue(record, columnName);
-                    if (value !== null && value !== undefined && value !== '') {
-                        total += normalizeNumber(value);
-                    }
-                });
-                
-                const formattedTotal = parseFloat(total.toFixed(decimalPlaces));
-                apex.item(targetItem).setValue(formattedTotal);
-                return formattedTotal;
+                    // Usar model.forEach en lugar de model.getRecords()
+                    model.forEach(function(record) {
+                        const value = model.getValue(record, columnName);
+                        if (value !== null && value !== undefined && value !== '') {
+                            const normalizedValue = normalizeNumber(value);
+                            total += normalizedValue;
+                            validRecords++;
+                        }
+                    });
+                    
+                    // Formatear resultado
+                    const formattedTotal = parseFloat(total.toFixed(decimalPlaces));
+                    
+                    // Colocar en el item
+                    apex.item(targetItem).setValue(formattedTotal);
+                    
+                    //console.log(`apexGridUtils: Suma de ${columnName}: ${validRecords} registros = ${formattedTotal}`);
+                    
+                    return formattedTotal;
+                    
+                } catch (error) {
+                    console.error('apexGridUtils: Error al calcular suma:', error);
+                    return 0;
+                }
             };
             
             // Calcular suma inicial
@@ -687,17 +697,17 @@ window.apexGridUtils = (function() {
                 // Suscribirse a cambios en el modelo
                 model.subscribe({
                     onChange: function(type, change) {
-                        if (['set', 'add', 'delete', 'reset'].includes(type)) {
-                            // Un pequeño delay puede ayudar a que el modelo se estabilice antes de calcular
-                           setTimeout(calculateSum, 50);
-                       }
+                        if (type === 'set' && change.field === columnName) {
+                            // Pequeño delay para asegurar que el cambio se haya aplicado
+                            setTimeout(calculateSum, 50);
+                        }
                     }
                 });
                 
                 // También escuchar cambios en la estructura del grid (nuevas filas, eliminaciones)
                 model.subscribe({
                     onChange: function(type) {
-                        if (type === 'add' || type === 'delete' || type === 'reset' || type === 'add') {
+                        if (type === 'add' || type === 'delete' || type === 'reset') {
                             setTimeout(calculateSum, 100);
                         }
                     }
@@ -897,48 +907,55 @@ window.apexGridUtils = (function() {
      * @param {boolean} refresh - Si debe refrescar la vista (default: true)
      * @returns {boolean} - true si se estableció correctamente
      */
+    function getGridModel(gridStaticId) {
+        const region = apex.region(gridStaticId);
+        if (!region) return null;
+    
+        const widget = region.widget();
+        if (!widget) return null;
+    
+        const gridView = widget.interactiveGrid("getViews").grid;
+        if (!gridView) return null;
+    
+        return gridView.model;
+    }
+    
     function setCellValue(gridStaticId, columnName, rowIndex, value, refresh = true) {
         try {
             console.log(`🔧 apexGridUtils: Seteando valor ${value} en ${columnName}, fila ${rowIndex}`);
-            
-            // Validaciones robustas de parámetros
+    
             if (!gridStaticId || typeof gridStaticId !== 'string') {
                 console.error('apexGridUtils: gridStaticId debe ser un string válido');
                 return false;
             }
-            
+    
             if (!columnName || typeof columnName !== 'string') {
                 console.error('apexGridUtils: columnName debe ser un string válido');
                 return false;
             }
-            
+    
             if (rowIndex === undefined || rowIndex === null) {
                 console.error('apexGridUtils: rowIndex no puede ser undefined o null');
                 return false;
             }
-            
-            // Validar el valor - permitir 0, false, string vacío, pero no undefined/null
+    
             if (value === undefined || value === null) {
                 console.error('apexGridUtils: value no puede ser undefined o null');
                 return false;
             }
-            
-            // Obtener el modelo usando el método que funciona
-            const model = apex.region(gridStaticId).widget().interactiveGrid("getCurrentView").model;
-            
+    
+            const model = getGridModel(gridStaticId);
             if (!model) {
                 console.error('apexGridUtils: No se pudo obtener el modelo del grid');
                 return false;
             }
-            
+    
             console.log(`✅ apexGridUtils: Modelo obtenido correctamente`);
-            
             let targetRecord = null;
-            
-            // Obtener registro objetivo
+    
             if (rowIndex === -1) {
-                // Usar el registro seleccionado
-                const selectedRecords = apex.region(gridStaticId).widget().interactiveGrid("getCurrentView").getSelectedRecords();
+                const gridView = apex.region(gridStaticId).widget().interactiveGrid("getViews").grid;
+                const selectedRecords = gridView.getSelectedRecords();
                 if (selectedRecords && selectedRecords.length > 0) {
                     targetRecord = selectedRecords[0];
                 } else {
@@ -946,30 +963,19 @@ window.apexGridUtils = (function() {
                     return false;
                 }
             } else {
-                // Obtener registro por índice usando un enfoque más directo
-                console.log(`🔍 apexGridUtils DEBUG: Buscando fila ${rowIndex}, rowIndex-1 = ${rowIndex - 1}`);
-                
-                // Usar un array para almacenar todos los registros y acceder por índice
                 const allRecords = [];
-                
                 try {
-                    model.forEach(function(record, index, id) {
-                        console.log(`🔍 apexGridUtils DEBUG: Procesando registro - index: ${index}, id: ${id}`);
+                    model.forEach(function(record) {
                         if (record && typeof record === 'object') {
                             allRecords.push(record);
-                        } else {
-                            console.warn(`apexGridUtils: Registro inválido encontrado en índice ${index}`);
                         }
                     });
                 } catch (forEachError) {
                     console.error('apexGridUtils: Error en model.forEach:', forEachError);
                     return false;
                 }
-                
-                console.log(`📊 apexGridUtils: Total registros encontrados: ${allRecords.length}`);
-                
-                const targetIndex = rowIndex - 1; // rowIndex 1 = primera fila (índice 0)
-                
+    
+                const targetIndex = rowIndex - 1;
                 if (targetIndex >= 0 && targetIndex < allRecords.length) {
                     targetRecord = allRecords[targetIndex];
                     console.log(`✅ apexGridUtils DEBUG: Encontrado registro objetivo en índice ${targetIndex} (ID: ${targetRecord.id})`);
@@ -978,15 +984,12 @@ window.apexGridUtils = (function() {
                     return false;
                 }
             }
-            
+    
             if (!targetRecord) {
                 console.error(`apexGridUtils: No se pudo obtener registro objetivo`);
                 return false;
             }
-            
-            console.log(`✅ apexGridUtils: Registro objetivo obtenido - ID: ${targetRecord.id}`);
-            
-            // Obtener valor actual para comparar
+    
             let currentValue;
             try {
                 currentValue = model.getValue(targetRecord, columnName);
@@ -995,49 +998,35 @@ window.apexGridUtils = (function() {
                 console.error('apexGridUtils: Error al obtener valor actual:', getValueError);
                 return false;
             }
-            
-            // Verificar que el registro no esté eliminado
-            let metadata = null;
+    
             try {
                 const recordId = targetRecord.id;
-                // Solo intentar obtener metadata si el recordId existe y el método está disponible
                 if (recordId && model.getRecordMetadata && typeof model.getRecordMetadata === 'function') {
-                    metadata = model.getRecordMetadata(recordId);
-                    
+                    const metadata = model.getRecordMetadata(recordId);
                     if (metadata && metadata.deleted) {
                         console.warn(`apexGridUtils: Registro ${recordId} está eliminado, no se puede modificar`);
                         return false;
                     }
-                } else {
-                    console.log(`apexGridUtils: Metadata no disponible o recordId no encontrado, continuando...`);
                 }
             } catch (metadataError) {
                 console.warn('apexGridUtils: Error al obtener metadata del registro:', metadataError);
-                // Continuar sin metadata si no está disponible
             }
-            
-            // Preparar el valor final - manejar formato europeo si es necesario
+    
             let finalValue = value;
-            
-            // Si el valor es numérico y la columna parece ser numérica, formatear al formato europeo
             if (typeof value === 'number' && !isNaN(value)) {
-                // Detectar si la columna es numérica basándose en el nombre
                 const numericColumns = ['COSTO', 'CANTIDAD', 'TOTAL', 'PRECIO', 'IMPORTE', 'SUBTOTAL', 'IVA', 'DESCUENTO'];
                 const isNumericColumn = numericColumns.some(col => columnName.toUpperCase().includes(col));
-                
                 if (isNumericColumn) {
                     try {
-                        // Formatear al formato europeo (punto como separador de miles, coma como decimal)
                         finalValue = value.toFixed(3).replace('.', ',');
                         console.log(`📊 apexGridUtils: Valor formateado al formato europeo: ${finalValue}`);
                     } catch (formatError) {
                         console.error('apexGridUtils: Error al formatear valor:', formatError);
-                        finalValue = value; // Usar valor original si falla el formateo
+                        finalValue = value;
                     }
                 }
             }
-            
-            // Establecer el valor usando el método directo que funciona
+    
             try {
                 model.setValue(targetRecord, columnName, finalValue);
                 console.log(`📊 apexGridUtils: Valor establecido: ${finalValue}`);
@@ -1045,25 +1034,20 @@ window.apexGridUtils = (function() {
                 console.error('apexGridUtils: Error al establecer valor:', setValueError);
                 return false;
             }
-            
-            // Verificar que se estableció correctamente
-            let verifyValue;
+    
             try {
-                verifyValue = model.getValue(targetRecord, columnName);
+                const verifyValue = model.getValue(targetRecord, columnName);
                 console.log(`📊 apexGridUtils: Valor después de seteo: ${verifyValue}`);
             } catch (verifyError) {
                 console.error('apexGridUtils: Error al verificar valor:', verifyError);
                 return false;
             }
-            
-            // Forzar el estado "dirty" del registro para que APEX lo reconozca como modificado
+    
             try {
                 if (model.markDirty) {
                     model.markDirty(targetRecord);
                     console.log(`✅ apexGridUtils: Registro marcado como dirty`);
                 }
-                
-                // Commit del registro individual
                 if (model.commitRecord) {
                     model.commitRecord(targetRecord);
                     console.log(`✅ apexGridUtils: Registro confirmado`);
@@ -1071,8 +1055,7 @@ window.apexGridUtils = (function() {
             } catch (commitError) {
                 console.warn('apexGridUtils: Error al confirmar registro:', commitError);
             }
-            
-            // Refrescar la vista si está habilitado
+    
             if (refresh) {
                 try {
                     const grid = apex.region(gridStaticId).call("getViews").grid;
@@ -1084,25 +1067,15 @@ window.apexGridUtils = (function() {
                     console.warn('apexGridUtils: No se pudo refrescar la vista:', e);
                 }
             }
-            
-            // Verificación final con retry si es necesario
+    
             setTimeout(() => {
                 const finalCheckValue = model.getValue(targetRecord, columnName);
                 console.log(`📊 apexGridUtils: Verificación final - ${columnName}: ${finalCheckValue}`);
-                
-                // Si el valor cambió inesperadamente, intentar re-establecerlo
                 if (finalCheckValue !== finalValue && finalCheckValue !== value) {
                     console.warn(`⚠️ apexGridUtils: Valor cambió inesperadamente, re-estableciendo...`);
-                    
-                    // Re-establecer el valor
                     model.setValue(targetRecord, columnName, finalValue);
-                    
-                    // Forzar dirty state nuevamente
-                    if (model.markDirty) {
-                        model.markDirty(targetRecord);
-                    }
-                    
-                    // Verificación final después del retry
+                    if (model.markDirty) model.markDirty(targetRecord);
+    
                     setTimeout(() => {
                         const retryValue = model.getValue(targetRecord, columnName);
                         if (retryValue === finalValue || retryValue === value) {
@@ -1115,22 +1088,23 @@ window.apexGridUtils = (function() {
                     console.log(`✅ apexGridUtils: Valor se mantuvo correctamente`);
                 }
             }, 100);
-            
+    
             return true;
-            
+    
         } catch (error) {
             console.error('apexGridUtils setCellValue error:', error);
             console.error('apexGridUtils setCellValue - Parámetros recibidos:', {
-                gridStaticId: gridStaticId,
-                columnName: columnName,
-                rowIndex: rowIndex,
-                value: value,
+                gridStaticId,
+                columnName,
+                rowIndex,
+                value,
                 valueType: typeof value,
-                refresh: refresh
+                refresh
             });
             return false;
         }
     }
+    
 
     /**
      * Setear valor en la fila seleccionada (Versión Mejorada)
@@ -1151,6 +1125,7 @@ window.apexGridUtils = (function() {
      * @param {boolean} refresh - Si debe refrescar la vista (default: true)
      */
     function setFirstCellValue(gridStaticId, columnName, value, refresh = true) {
+        
         return setCellValue(gridStaticId, columnName, 1, value, refresh);
     }
 
@@ -4553,35 +4528,6 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
     }, 100);
 
     /**
-    * Verifica de forma fiable si un registro de un modelo de IG está marcado para eliminación.
-    * @param {object} record El objeto de registro del modelo.
-    * @param {object} model El modelo del Interactive Grid.
-    * @returns {boolean} True si el registro está marcado para ser eliminado.
-    */
-    function isRecordMarkedForDeletion(record, model) {
-        try {
-            // El método más fiable es a través de los metadatos del registro.
-            const recordId = model.getRecordId(record);
-            if (recordId) {
-                const meta = model.getRecordMetadata(recordId);
-                // Si el registro fue eliminado (meta.deleted) o es un agregado (meta.agg), no debe procesarse.
-                if (meta && (meta.deleted || meta.agg)) {
-                    return true;
-                }
-            }
-            // Fallback por si la metadata no está disponible o es un registro nuevo sin ID.
-            // La propiedad 't' con el valor 'd' también es un indicador interno de APEX.
-            if (record._meta && record._meta.t === 'd') {
-                return true;
-            }
-
-        } catch (e) {
-            console.warn('apexGridUtils: No se pudo verificar el estado del registro.', e);
-        }
-        return false;
-    }
-
-    /**
      * Recalcula y setea valores en una columna de todas las filas del Interactive Grid.
      * @param {string} gridStaticId - Static ID del Interactive Grid
      * @param {string[]|object} sourceColumnsOrConfig - Array de nombres de columnas fuente O objeto de configuración
@@ -4619,39 +4565,35 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
 
             let rowIndex = 0;
             let processedRows = 0;
-            let skippedRows = 0;
             
-            model.forEach(function(record, index, id) {
-                // Primero, verificamos si el registro está eliminado.
-                // Si es así, saltamos CUALQUIER procesamiento para este registro.
-                if (isRecordMarkedForDeletion(record, model)) {
-                    console.log(`⏭️ apexGridUtils: Saltando registro ${id} - marcado para eliminación`);
-                    return; // Continuar con el siguiente registro del forEach
-                }
-                
-                try {
-                    const values = {};
-                    config.sourceColumns.forEach(col => {
-                        values[col] = apexGridUtils.normalizeNumber(model.getValue(record, col));
-                    });
+            model.forEach(function(record) {
+                // Construir objeto de valores fuente
+                const values = {};
+                config.sourceColumns.forEach(col => {
+                    values[col] = apexGridUtils.normalizeNumber(model.getValue(record, col));
+                });
 
-                    let result = config.formula(values, record, index);
-                    const decimalPlaces = config.decimalPlaces || 2;
-                    result = parseFloat(Number(result).toFixed(decimalPlaces));
+                // Calcular el nuevo valor usando la fórmula
+                let result = config.formula(values, record, rowIndex);
 
-                    // Esta línea ya no se ejecutará para registros eliminados, evitando el error.
-                    model.setValue(record, config.targetColumn, result);
+                // Redondear a los decimales indicados
+                const decimalPlaces = config.decimalPlaces || 2;
+                result = parseFloat(Number(result).toFixed(decimalPlaces));
 
-                } catch (recordError) {
-                    console.warn(`apexGridUtils: Error al procesar registro ${id}:`, recordError);
-                }
+                // Setear el valor en la columna destino
+                model.setValue(record, config.targetColumn, result);
+
+                // Marcar como dirty si corresponde
+                if (model.markDirty) model.markDirty(record);
+
+                processedRows++;
+                rowIndex++;
             });
-
 
             // Refrescar la vista del grid
             grid.view$.trigger('refresh');
             
-            console.log(`✅ apexGridUtils: Recalculación completada - ${processedRows} filas procesadas, ${skippedRows} filas saltadas`);
+            console.log(`✅ apexGridUtils: Recalculación completada - ${processedRows} filas procesadas`);
             return true;
             
         } catch (error) {
