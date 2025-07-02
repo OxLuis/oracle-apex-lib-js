@@ -347,68 +347,51 @@ window.apexGridUtils = (function() {
      * Ejecuta un cálculo específico en el registro activo
      */
     function calculateFormula(gridStaticId, settings) {
-        try {
-            // Obtener el grid y registro activo
-            const gridData = getActiveGridRecord(gridStaticId);
-            if (!gridData.success) {
-                return 0;
-            }
-
-            const { model, record } = gridData;
-
-            // Obtener valores de las columnas fuente y normalizarlos
-            const values = {};
-            settings.sourceColumns.forEach(column => {
-                const rawValue = model.getValue(record, column);
-                values[column] = normalizeNumber(rawValue);
-                ////console.log(`apexGridUtils: Columna ${column} - Valor original: "${rawValue}", Normalizado: ${values[column]}`);
-            });
-
-            // Ejecutar la fórmula
-            let result = settings.formula(values);
-            
-            // Formatear resultado con los decimales especificados
-            const decimalPlaces = settings.decimalPlaces || 2;
-            result = parseFloat(result.toFixed(decimalPlaces));
-            
-            ////console.log(`apexGridUtils: Resultado calculado: ${result} (con ${decimalPlaces} decimales)`);
-
-            // Actualizar columna destino
-            // Importante: Guardar el valor como número, no como string
-            model.setValue(record, settings.targetColumn, result);
-            
-            // Forzar actualización del grid para que se aplique el formato correcto
-            try {
-                const ig$ = gridData.gridView;
-                if (ig$ && ig$.refreshView) {
-                    ig$.refreshView();
-                }
-                
-                // Alternativa: Forzar actualización de la celda específica
-                if (ig$ && ig$.getView) {
-                    const view = ig$.getView();
-                    if (view && view.refresh) {
-                        view.refresh();
-                    }
-                }
-            } catch (e) {
-                // Si no se puede refrescar, continuar
-                console.log('apexGridUtils: No se pudo refrescar la vista del grid');
-            }
-            
-            // Verificar que el valor se guardó correctamente
-            setTimeout(() => {
-                const savedValue = model.getValue(record, settings.targetColumn);
-                //console.log(`apexGridUtils: Valor guardado en el modelo: ${savedValue} (tipo: ${typeof savedValue})`);
-            }, 100);
-
-            return result;
-
-        } catch (error) {
-            console.error('apexGridUtils calculateFormula error:', error);
-            return 0;
+    try {
+        const grid = apex.region(gridStaticId).call("getViews").grid;
+        if (!grid) {
+            console.error('apexGridUtils: No se pudo encontrar el grid con ID:', gridStaticId);
+            return;
         }
+        const model = grid.model;
+
+        // 1. ITERAR SOBRE TODAS LAS FILAS DEL MODELO
+        model.forEach(function(record) {
+            
+            // 2. OMITIR FILAS MARCADAS PARA ELIMINACIÓN
+            if (isRecordMarkedForDeletion(record, model)) {
+                return; // Saltar a la siguiente fila
+            }
+
+            try {
+                // 3. OBTENER VALORES Y APLICAR FÓRMULA (para la fila actual del bucle)
+                const values = {};
+                settings.sourceColumns.forEach(column => {
+                    values[column] = normalizeNumber(model.getValue(record, column));
+                });
+
+                let result = settings.formula(values, record); // Pasamos 'record' por si la fórmula lo necesita
+                const decimalPlaces = settings.decimalPlaces || 2;
+                const roundedResult = parseFloat(Number(result).toFixed(decimalPlaces));
+
+                // 4. CONDICIÓN DE GUARDA (ANTI-BUCLE)
+                const currentValue = model.getValue(record, settings.targetColumn);
+                const roundedCurrentValue = parseFloat(Number(currentValue).toFixed(decimalPlaces));
+
+                if (roundedCurrentValue !== roundedResult) {
+                    model.setValue(record, settings.targetColumn, roundedResult);
+                }
+
+            } catch (recordError) {
+                const recordId = model.getRecordId(record) || "nuevo";
+                console.warn(`Error al procesar la fórmula en la fila ${recordId}:`, recordError);
+            }
+        });
+
+    } catch (error) {
+        console.error('apexGridUtils calculateFormula error:', error);
     }
+}
 
     /**
      * Configurar eventos para disparar cálculos automáticamente
@@ -4588,74 +4571,96 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
      * @param {string} targetColumn - Columna donde se seteará el resultado (solo si se usa formato antiguo)
      * @param {function} formula - Función que recibe (values, record, index) y retorna el valor a setear (solo si se usa formato antiguo)
      * @param {number} decimalPlaces - Cantidad de decimales a redondear (default: 2, solo si se usa formato antiguo)
+     * @param {number} delay - Delay en milisegundos entre operaciones (default: 50)
      */
-    function recalculateAllRows(gridStaticId, sourceColumnsOrConfig, targetColumn, formula, decimalPlaces = 2) {
-        try {
-            // Detectar si se está usando el nuevo formato (objeto de configuración)
-            let config;
-            if (typeof sourceColumnsOrConfig === 'object' && !Array.isArray(sourceColumnsOrConfig)) {
-                // Nuevo formato: objeto de configuración
-                config = sourceColumnsOrConfig;
-                
-                // Validar parámetros requeridos
-                if (!config.sourceColumns || !config.targetColumn || !config.formula) {
-                    console.error('apexGridUtils: Faltan parámetros requeridos en configuración');
-                    return false;
+    function recalculateAllRows(gridStaticId, sourceColumnsOrConfig, targetColumn, formula, decimalPlaces = 2, delay = 50) {
+
+        setTimeout(() => {
+
+            try {
+                // Detectar si se está usando el nuevo formato (objeto de configuración)
+                let config;
+                if (typeof sourceColumnsOrConfig === 'object' && !Array.isArray(sourceColumnsOrConfig)) {
+                    // Nuevo formato: objeto de configuración
+                    config = sourceColumnsOrConfig;
+                    
+                    // Validar parámetros requeridos
+                    if (!config.sourceColumns || !config.targetColumn || !config.formula) {
+                        console.error('apexGridUtils: Faltan parámetros requeridos en configuración');
+                        return false;
+                    }
+                    
+                    // Agregar delay al config si no está definido
+                    if (config.delay === undefined) {
+                        config.delay = delay;
+                    }
+                } else {
+                    // Formato antiguo: parámetros separados (mantener compatibilidad)
+                    config = {
+                        sourceColumns: sourceColumnsOrConfig,
+                        targetColumn: targetColumn,
+                        formula: formula,
+                        decimalPlaces: decimalPlaces,
+                        delay: delay
+                    };
                 }
-            } else {
-                // Formato antiguo: parámetros separados (mantener compatibilidad)
-                config = {
-                    sourceColumns: sourceColumnsOrConfig,
-                    targetColumn: targetColumn,
-                    formula: formula,
-                    decimalPlaces: decimalPlaces
-                };
+
+                const grid = apex.region(gridStaticId).call("getViews").grid;
+                const model = grid.model;
+
+                console.log(`🔄 apexGridUtils: Recalculando todas las filas en ${gridStaticId} -> ${config.targetColumn} (delay: ${config.delay}ms)`);
+
+                let processedRows = 0;
+                let skippedRows = 0;
+                
+                // Procesar registros de forma síncrona
+                model.forEach(function(record, index, id) {
+                    try {
+                        // Verificar si el registro está marcado para eliminación
+                        if (isRecordMarkedForDeletion(record, model)) {
+                            console.log(`⏭️ apexGridUtils: Saltando registro ${id} - marcado para eliminación`);
+                            skippedRows++;
+                            return; // Continuar con el siguiente registro
+                        }
+                        
+                        // Construir objeto de valores fuente
+                        const values = {};
+                        config.sourceColumns.forEach(col => {
+                            values[col] = apexGridUtils.normalizeNumber(model.getValue(record, col));
+                        });
+
+                        // Calcular el nuevo valor usando la fórmula
+                        let result = config.formula(values, record, index);
+
+                        // Redondear a los decimales indicados
+                        const decimalPlaces = config.decimalPlaces || 2;
+                        result = parseFloat(Number(result).toFixed(decimalPlaces));
+
+                        // Setear el valor en la columna destino
+                        model.setValue(record, config.targetColumn, result);
+
+                        // Marcar como dirty si corresponde
+                        if (model.markDirty) model.markDirty(record);
+
+                        processedRows++;
+                        
+                    } catch (recordError) {
+                        console.warn(`apexGridUtils: Error al procesar registro ${id}:`, recordError);
+                        skippedRows++;
+                    }
+                });
+
+                // Refrescar la vista del grid
+                grid.view$.trigger('refresh');
+                
+                console.log(`✅ apexGridUtils: Recalculación completada - ${processedRows} filas procesadas, ${skippedRows} filas saltadas`);
+                return true;
+                
+            } catch (error) {
+                console.error('apexGridUtils.recalculateAllRows error:', error);
+                return false;
             }
-
-            const grid = apex.region(gridStaticId).call("getViews").grid;
-            const model = grid.model;
-
-            console.log(`🔄 apexGridUtils: Recalculando todas las filas en ${gridStaticId} -> ${config.targetColumn}`);
-
-            let rowIndex = 0;
-            let processedRows = 0;
-            let skippedRows = 0;
             
-            model.forEach(function(record, index, id) {
-                // Primero, verificamos si el registro está eliminado.
-                // Si es así, saltamos CUALQUIER procesamiento para este registro.
-                if (isRecordMarkedForDeletion(record, model)) {
-                    console.log(`⏭️ apexGridUtils: Saltando registro ${id} - marcado para eliminación`);
-                    return; // Continuar con el siguiente registro del forEach
-                }
-                
-                try {
-                    const values = {};
-                    config.sourceColumns.forEach(col => {
-                        values[col] = apexGridUtils.normalizeNumber(model.getValue(record, col));
-                    });
-
-                    let result = config.formula(values, record, index);
-                    const decimalPlaces = config.decimalPlaces || 2;
-                    result = parseFloat(Number(result).toFixed(decimalPlaces));
-
-                    // Esta línea ya no se ejecutará para registros eliminados, evitando el error.
-                    model.setValue(record, config.targetColumn, result);
-
-                } catch (recordError) {
-                    console.warn(`apexGridUtils: Error al procesar registro ${id}:`, recordError);
-                }
-            });
-
-
-            // Refrescar la vista del grid
-            grid.view$.trigger('refresh');
-            
-            console.log(`✅ apexGridUtils: Recalculación completada - ${processedRows} filas procesadas, ${skippedRows} filas saltadas`);
-            return true;
-            
-        } catch (error) {
-            console.error('apexGridUtils.recalculateAllRows error:', error);
-            return false;
-        }
+        }, delay);
+        
     }
