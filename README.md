@@ -397,165 +397,226 @@ apexGridUtils.sumTotalToItem('mi_grid', 'P1_SUMA_TOTAL', 2);
 apexGridUtils.setupGridListener('mi_grid', function() {
     // Recalcular sumas cuando cambie el grid
     sumaConfig.calculateSum();
-});
+}, ['set', 'add', 'delete', 'reset']);
 ```
 
-#### sumColumnToItem(gridStaticId, columnName, targetItem, decimalPlaces, autoUpdate)
+### Recalculación Masiva de Filas
 
-Suma todos los valores de una columna específica del Interactive Grid y coloca el resultado en un item de APEX.
+#### recalculateAllRows(gridStaticId, sourceColumnsOrConfig, targetColumn, formula, decimalPlaces, delay)
 
-```javascript
-// Configuración básica (formato europeo)
-let config = apexGridUtils.sumColumnToItem('mi_grid', 'TOTAL', 'P1_SUMA_TOTAL', 2, true);
+Recalcula y actualiza valores en una columna específica de **todas las filas** del Interactive Grid de forma síncrona. Esta función es especialmente útil para cálculos que dependen de valores globales o cuando necesitas recalcular toda una columna basada en una fórmula.
 
-// Configuración sin actualización automática (formato europeo)
-let configManual = apexGridUtils.sumColumnToItem('mi_grid', 'PRECIO', 'P1_TOTAL_PRECIOS', 2, false);
+**Características principales:**
+- ✅ **Procesamiento síncrono** - Ejecuta inmediatamente todas las operaciones
+- ✅ **Detección automática** de registros marcados para eliminación
+- ✅ **Manejo robusto de errores** - Continúa procesando aunque falle una fila
+- ✅ **Soporte para delay** - Permite configurar un delay opcional
+- ✅ **Dos formatos de uso** - Compatible con formato antiguo y nuevo objeto de configuración
 
-// Recalcular manualmente
-configManual.calculateSum();
-```
-
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columnName` (string): Nombre de la columna a sumar
-- `targetItem` (string): ID del item de APEX donde colocar el resultado
-- `decimalPlaces` (number): Número de decimales para el resultado (default: 2)
-- `autoUpdate` (boolean): Si debe actualizar automáticamente cuando cambien los datos (default: true)
-
-**Retorna:** `object` - Objeto con configuración de la suma
-```javascript
-{
-    sum: 1500.50,                    // Suma actual
-    calculateSum: function(),        // Función para recalcular
-    gridStaticId: 'mi_grid',         // ID del grid
-    columnName: 'TOTAL',             // Nombre de la columna
-    targetItem: 'P1_SUMA_TOTAL'      // ID del item destino
-}
-```
-
-**Características:**
-- Suma solo valores numéricos válidos (ignora nulos, undefined, vacíos)
-- Maneja formato europeo automáticamente (preserva el formato original)
-- Actualización automática cuando cambian los datos del grid
-- Permite recálculo manual usando `config.calculateSum()`
-- Configura listeners para cambios en el modelo del grid
-
-### Recálculos y Refrescos
+#### Formato de Uso (Nuevo - Recomendado)
 
 ```javascript
-// Forzar recálculo de fórmula específica (formato europeo)
-apexGridUtils.forceRecalculate('mi_grid', {
-    sourceColumns: ['CANTIDAD', 'PRECIO'],
-    targetColumn: 'TOTAL',
+// Recalcular porcentajes basados en un total global
+apexGridUtils.recalculateAllRows('DetallesP', {
+    sourceColumns: ['TOTAL'], 
+    targetColumn: 'PORCENTAJE', 
     formula: function(values) {
-        return values.CANTIDAD * values.PRECIO;
+        const totalGlobal = apexUtils.get('P916_TOTAL_PROD');
+        if (totalGlobal <= 0) return 0;
+        return (values.TOTAL / totalGlobal) * 100;
+    },
+    decimalPlaces: 3,
+    delay: 50  // Delay opcional en milisegundos
+});
+
+// Recalcular precios con IVA
+apexGridUtils.recalculateAllRows('Productos', {
+    sourceColumns: ['PRECIO_BASE'], 
+    targetColumn: 'PRECIO_CON_IVA', 
+    formula: function(values) {
+        return values.PRECIO_BASE * 1.21; // 21% IVA
     },
     decimalPlaces: 2
 });
 
-// Refrescar grid y recalcular (formato europeo)
-apexGridUtils.refreshGridAndRecalculate('mi_grid', {
-    sourceColumns: ['CANTIDAD', 'PRECIO'],
-    targetColumn: 'TOTAL',
+// Recalcular totales con descuento
+apexGridUtils.recalculateAllRows('Detalles', {
+    sourceColumns: ['SUBTOTAL', 'DESCUENTO'], 
+    targetColumn: 'TOTAL_FINAL', 
     formula: function(values) {
-        return values.CANTIDAD * values.PRECIO;
-    }
+        return values.SUBTOTAL * (1 - values.DESCUENTO / 100);
+    },
+    decimalPlaces: 2
 });
-
-// Refrescar todos los cálculos automáticos
-apexGridUtils.refreshAutoCalculation('mi_grid');
 ```
 
-### Funciones de Refresco de Grid
-
-#### refreshGrid(gridStaticId, refreshRegion)
-
-Refresca la vista del Interactive Grid de manera simple y eficiente.
+#### Formato de Uso (Antiguo - Compatibilidad)
 
 ```javascript
-// Refrescar solo la vista del grid
-apexGridUtils.refreshGrid('mi_grid', false);
-
-// Refrescar vista del grid y región completa
-apexGridUtils.refreshGrid('mi_grid', true);
-
-// Refrescar con configuración por defecto (incluye región)
-apexGridUtils.refreshGrid('mi_grid');
+// Formato antiguo para compatibilidad
+apexGridUtils.recalculateAllRows(
+    'DetallesP',                    // gridStaticId
+    ['TOTAL'],                      // sourceColumns
+    'PORCENTAJE',                   // targetColumn
+    function(values) {              // formula
+        const totalGlobal = apexUtils.get('P916_TOTAL_PROD');
+        return totalGlobal > 0 ? (values.TOTAL / totalGlobal) * 100 : 0;
+    },
+    3,                              // decimalPlaces
+    50                              // delay (opcional)
+);
 ```
 
-**Parámetros:**
+#### Parámetros
+
+**Formato Nuevo (Objeto de configuración):**
 - `gridStaticId` (string): Static ID del Interactive Grid
-- `refreshRegion` (boolean): Si debe refrescar también la región completa (default: true)
+- `config.sourceColumns` (array): Array de nombres de columnas fuente
+- `config.targetColumn` (string): Columna donde se guardará el resultado
+- `config.formula` (function): Función que recibe `(values, record, index)` y retorna el valor a calcular
+- `config.decimalPlaces` (number): Número de decimales para redondear (default: 2)
+- `config.delay` (number): Delay en milisegundos (default: 50, aunque no se use en procesamiento síncrono)
 
-**Retorna:** `boolean` - true si se refrescó correctamente
-
-#### refreshGridAndRecalculateSimple(gridStaticId, targetColumn, delay)
-
-Refresca el grid y recalcula automáticamente las fórmulas configuradas.
-
-```javascript
-// Refrescar grid y recalcular todas las columnas automáticas
-apexGridUtils.refreshGridAndRecalculateSimple('mi_grid');
-
-// Refrescar grid y recalcular columna específica
-apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 100);
-
-// Refrescar grid y recalcular con delay personalizado
-apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 200);
-```
-
-**Parámetros:**
+**Formato Antiguo:**
 - `gridStaticId` (string): Static ID del Interactive Grid
-- `targetColumn` (string): Columna específica a recalcular (opcional)
-- `delay` (number): Delay en milisegundos antes del recálculo (default: 100)
+- `sourceColumns` (array): Array de nombres de columnas fuente
+- `targetColumn` (string): Columna donde se guardará el resultado
+- `formula` (function): Función que recibe `(values, record, index)` y retorna el valor a calcular
+- `decimalPlaces` (number): Número de decimales para redondear (default: 2)
+- `delay` (number): Delay en milisegundos (default: 50)
 
-**Retorna:** `boolean` - true si se ejecutó correctamente
+#### Ejemplos Prácticos
 
-**Casos de Uso:**
-
+**1. Cálculo de Porcentajes**
 ```javascript
-// Después de modificar valores programáticamente (formato europeo)
-apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, 1.500,50, false); // sin refresh automático
-apexGridUtils.refreshGrid('mi_grid'); // refrescar manualmente
-
-// Después de cambios masivos de datos
-apexGridUtils.setearDatosIG({
-    regionId: 'mi_grid',
-    datos: nuevosDatos,
-    refrescar: false // no refrescar automáticamente
-});
-apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 150); // refrescar y recalcular
-
-// Para resolver problemas de sincronización (formato europeo)
-function actualizarCostoYRecalcular() {
-    let nuevoCosto = calcularNuevoCosto();
-    apexGridUtils.setCellValue('mi_grid', 'COSTO', 1, nuevoCosto, false);
-    
-    // Refrescar y recalcular con delay para asegurar sincronización
-    apexGridUtils.refreshGridAndRecalculateSimple('mi_grid', 'TOTAL', 100);
+function recalcularPorcentajes() {
+    apexGridUtils.recalculateAllRows('DetallesP', {
+        sourceColumns: ['TOTAL'], 
+        targetColumn: 'PORCENTAJE', 
+        formula: function(values) {
+            const totalGlobal = apexUtils.get('P916_TOTAL_PROD');
+            if (totalGlobal <= 0) {
+                console.warn('apexGridUtils: Total global es 0 o negativo');
+                return 0;
+            }
+            const porcentaje = (values.TOTAL / totalGlobal) * 100;
+            console.log('Porcentaje calculado:', porcentaje);
+            return porcentaje;
+        },
+        decimalPlaces: 3
+    });
 }
 ```
 
-### Funciones de Confirmación de Cambios
-
-#### commitGridChanges(gridStaticId, commitAll, forceDirty)
-
-Confirma cambios en el modelo del grid sin refrescar la vista.
-
+**2. Aplicación de Descuentos**
 ```javascript
-// Confirmar todos los cambios
-apexGridUtils.commitGridChanges('mi_grid', true, true);
+function aplicarDescuentoGlobal(porcentajeDescuento) {
+    apexGridUtils.recalculateAllRows('Productos', {
+        sourceColumns: ['PRECIO_ORIGINAL'], 
+        targetColumn: 'PRECIO_FINAL', 
+        formula: function(values) {
+            return values.PRECIO_ORIGINAL * (1 - porcentajeDescuento / 100);
+        },
+        decimalPlaces: 2
+    });
+}
 
-// Confirmar solo el registro seleccionado
-apexGridUtils.commitGridChanges('mi_grid', false, true);
+// Usar: aplicarDescuentoGlobal(15); // 15% de descuento
 ```
 
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `commitAll` (boolean): Si debe hacer commit de todos los registros (default: true)
-- `forceDirty` (boolean): Si debe forzar el estado dirty antes de confirmar (default: true)
+**3. Cálculo de Totales con Impuestos**
+```javascript
+function recalcularConImpuestos() {
+    apexGridUtils.recalculateAllRows('Factura', {
+        sourceColumns: ['SUBTOTAL', 'IVA_PORCENTAJE'], 
+        targetColumn: 'TOTAL_CON_IVA', 
+        formula: function(values) {
+            return values.SUBTOTAL * (1 + values.IVA_PORCENTAJE / 100);
+        },
+        decimalPlaces: 2
+    });
+}
+```
 
-**Retorna:** `boolean` - true si se confirmaron correctamente
+**4. Normalización de Datos**
+```javascript
+function normalizarPrecios() {
+    apexGridUtils.recalculateAllRows('Productos', {
+        sourceColumns: ['PRECIO_ACTUAL'], 
+        targetColumn: 'PRECIO_NORMALIZADO', 
+        formula: function(values) {
+            // Redondear a múltiplos de 0.50
+            return Math.round(values.PRECIO_ACTUAL * 2) / 2;
+        },
+        decimalPlaces: 2
+    });
+}
+```
+
+#### Características Avanzadas
+
+**Detección Automática de Registros Eliminados:**
+```javascript
+// La función automáticamente detecta y salta registros marcados para eliminación
+// No necesitas hacer nada especial, simplemente funciona
+
+apexGridUtils.recalculateAllRows('mi_grid', {
+    sourceColumns: ['VALOR'], 
+    targetColumn: 'CALCULADO', 
+    formula: function(values) {
+        return values.VALOR * 2;
+    }
+});
+// Los registros marcados para eliminación se saltan automáticamente
+```
+
+**Manejo de Errores Robusto:**
+```javascript
+// Si una fila falla, la función continúa con las siguientes
+apexGridUtils.recalculateAllRows('mi_grid', {
+    sourceColumns: ['A', 'B'], 
+    targetColumn: 'RESULTADO', 
+    formula: function(values) {
+        // Si hay división por cero, la función maneja el error
+        return values.A / values.B;
+    }
+});
+```
+
+**Logging Detallado:**
+```javascript
+// La función proporciona logs informativos
+apexGridUtils.recalculateAllRows('mi_grid', {
+    sourceColumns: ['TOTAL'], 
+    targetColumn: 'PORCENTAJE', 
+    formula: function(values) {
+        return values.TOTAL * 0.1;
+    }
+});
+
+// Logs que verás en la consola:
+// 🔄 apexGridUtils: Recalculando todas las filas en mi_grid -> PORCENTAJE (delay: 50ms)
+// ⏭️ apexGridUtils: Saltando registro 123 - marcado para eliminación
+// ✅ apexGridUtils: Recalculación completada - 5 filas procesadas, 1 filas saltadas
+```
+
+#### Casos de Uso Comunes
+
+1. **Recálculo de Porcentajes** cuando cambia un total global
+2. **Aplicación de Descuentos** masivos a productos
+3. **Cálculo de Impuestos** en facturas
+4. **Normalización de Datos** en lotes
+5. **Recálculo de Totales** cuando cambian fórmulas de negocio
+6. **Aplicación de Tarifas** o comisiones
+
+#### Ventajas sobre Otras Soluciones
+
+- ✅ **Más rápido** que iterar fila por fila manualmente
+- ✅ **Más seguro** que modificar el modelo directamente
+- ✅ **Más robusto** con detección automática de errores
+- ✅ **Más flexible** con fórmulas personalizadas
+- ✅ **Mejor logging** para debugging
+- ✅ **Compatible** con registros marcados para eliminación
 
 ## 🎯 Sistema de Re-enfoque Automático de Celdas
 
