@@ -1971,7 +1971,9 @@ window.apexGridUtils = (function() {
         restoreFocus: restoreFocus,
         clearLastFocusedCell: clearLastFocusedCell,
         getFocusRestorationStatus: getFocusRestorationStatus,
-        recalculateAllRows: recalculateAllRows
+        recalculateAllRows: recalculateAllRows,
+        setItemOnRowSelect: setItemOnRowSelect,
+        setItemOnRowOrCellChange: setItemOnRowOrCellChange
     };
 
     // Inicializar el módulo automáticamente
@@ -4663,4 +4665,109 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             
         }, delay);
         
+    }
+
+    /**
+     * Escucha la selección de fila en un IG y setea el valor de una columna en un item de página.
+     * @param {string} gridStaticId - Static ID del IG (ej: 'IG_ANIMALES').
+     * @param {string} columnName - Nombre de la columna a extraer (ej: 'COD_ANIMAL').
+     * @param {string} itemName - Nombre del item de página donde setear el valor (ej: 'P_COD_ANIMAL').
+     */
+    function setItemOnRowSelect(gridStaticId, columnName, itemName) {
+        try {
+            // Esperar a que el IG esté inicializado
+            var region = apex.region(gridStaticId);
+            if (!region || !region.widget) {
+                console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
+                return false;
+            }
+            var $ig = region.widget();
+            // Evitar múltiples bindings
+            $ig.off('interactivegridselectionchange.setItemOnRowSelect');
+            $ig.on('interactivegridselectionchange.setItemOnRowSelect', function(event, ui) {
+                try {
+                    var view = $ig.interactiveGrid('getViews', 'grid');
+                    var model = view.model;
+                    var selectedRecords = ui.selectedRecords;
+                    if (selectedRecords && selectedRecords.length > 0) {
+                        var record = selectedRecords[0];
+                        var value = model.getValue(record, columnName);
+                        if (typeof $s === 'function') {
+                            $s(itemName, value);
+                        } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
+                            apex.item(itemName).setValue(value);
+                        } else {
+                            console.warn('apexGridUtils: No se pudo setear el valor en el item de página:', itemName);
+                        }
+                    }
+                } catch (e) {
+                    console.error('apexGridUtils: Error en setItemOnRowSelect (handler):', e);
+                }
+            });
+            return true;
+        } catch (error) {
+            console.error('apexGridUtils: Error en setItemOnRowSelect:', error);
+            return false;
+        }
+    }
+    /**
+     * Escucha selección de fila y cambios en una columna específica, y setea el valor en un item de página.
+     * @param {string} gridStaticId - Static ID del IG.
+     * @param {string} columnName - Columna a extraer.
+     * @param {string} itemName - Item de página a setear.
+     */
+    function setItemOnRowOrCellChange(gridStaticId, columnName, itemName) {
+        try {
+            var region = apex.region(gridStaticId);
+            if (!region || !region.widget) {
+                console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
+                return false;
+            }
+            var $ig = region.widget();
+            var view = $ig.interactiveGrid('getViews', 'grid');
+            var model = view.model;
+
+            // Limpia listeners previos
+            $ig.off('interactivegridselectionchange.setItemOnRowSelect');
+            model.unsubscribe && model.unsubscribe('setItemOnRowSelect');
+
+            // Listener de selección de fila
+            $ig.on('interactivegridselectionchange.setItemOnRowSelect', function(event, ui) {
+                try {
+                    var selectedRecords = ui.selectedRecords;
+                    if (selectedRecords && selectedRecords.length > 0) {
+                        var record = selectedRecords[0];
+                        var value = model.getValue(record, columnName);
+                        if (typeof $s === 'function') {
+                            $s(itemName, value);
+                        } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
+                            apex.item(itemName).setValue(value);
+                        }
+                    }
+                } catch (e) {
+                    console.error('apexGridUtils: Error en setItemOnRowOrCellChange (selection handler):', e);
+                }
+            });
+
+            // Listener de cambio de celda
+            model.subscribe({
+                id: 'setItemOnRowSelect',
+                onChange: function(type, change) {
+                    if (type === 'set' && change.field === columnName) {
+                        // Obtener el registro afectado
+                        var value = model.getValue(change.record, columnName);
+                        if (typeof $s === 'function') {
+                            $s(itemName, value);
+                        } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
+                            apex.item(itemName).setValue(value);
+                        }
+                    }
+                }
+            });
+
+            return true;
+        } catch (error) {
+            console.error('apexGridUtils: Error en setItemOnRowOrCellChange:', error);
+            return false;
+        }
     }

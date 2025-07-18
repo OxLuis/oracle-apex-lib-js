@@ -1412,7 +1412,6 @@ apexGridUtils.setearDatos('mi_grid', 'P1_DATOS_JSON', false, false, true);
 - `limpiar` (boolean): Si debe limpiar datos existentes (default: true)
 - `refrescar` (boolean): Si debe refrescar la grilla (default: true)
 - `modoEdicion` (boolean): Si debe habilitar modo edición (default: true)
-```
 
 #### refreshGridSafe(gridStaticId, commitChanges, refreshRegion)
 
@@ -1516,3 +1515,53 @@ apexGridUtils.refreshGridAndRecalculateSimple('DetallesP', 'TOTAL', 100);
 ```
 
 ### Funciones de Confirmación de Cambios
+
+```
+
+### setItemOnRowSelect(gridStaticId, columnName, itemName)
+
+Escucha la **selección de fila** en un Interactive Grid y setea el valor de una columna en un item de página. Útil cuando solo necesitas actualizar el item al seleccionar una fila (modo solo visualización).
+
+```javascript
+// Al seleccionar una fila, se setea el valor de la columna COD_ANIMAL en el item P1100_COD_ANIMAL_AUX
+apexGridUtils.setItemOnRowSelect('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del IG
+- `columnName` (string): Nombre de la columna a extraer
+- `itemName` (string): Nombre del item de página donde setear el valor
+
+**Retorna:** `boolean` - true si se configuró correctamente
+
+---
+
+### setItemOnRowOrCellChange(gridStaticId, columnName, itemName)
+
+Escucha tanto la **selección de fila** como los **cambios en una columna específica** (por edición, proceso server-side, etc) y setea el valor en un item de página. Es la opción recomendada para grids editables o cuando los valores pueden cambiar automáticamente.
+
+```javascript
+// Al seleccionar una fila o cambiar el valor de la columna COD_ANIMAL, se setea el item
+apexGridUtils.setItemOnRowOrCellChange('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del IG
+- `columnName` (string): Nombre de la columna a extraer
+- `itemName` (string): Nombre del item de página donde setear el valor
+
+**Retorna:** `boolean` - true si se configuró correctamente
+
+---
+
+#### ¿Cuál usar?
+- **Solo visualización:** Usa `setItemOnRowSelect`.
+- **Edición o cambios automáticos:** Usa `setItemOnRowOrCellChange` (recomendado para la mayoría de los casos).
+
+#### Ejemplo práctico
+```javascript
+// Solo necesitas una de las dos, según tu caso:
+apexGridUtils.setItemOnRowOrCellChange('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+// o
+apexGridUtils.setItemOnRowSelect('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+```
