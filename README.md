@@ -1,32 +1,75 @@
 # APEX Utils - Biblioteca de Utilidades para Oracle APEX
 
-**Autor:** Luis Talavera  
-**Versión:** 1.2.0  
-**Fecha:** 2024-12-19  
+**Versión:** 1.3.0  
+**Fecha:** 2025-08-29  
 **Licencia:** MIT
 
-Esta biblioteca proporciona un conjunto completo de utilidades para trabajar con Interactive Grids y elementos de Oracle APEX, facilitando operaciones comunes como cálculos automáticos, manipulación de datos y navegación.
+Una biblioteca completa de utilidades para trabajar con Interactive Grids y elementos de Oracle APEX, facilitando operaciones comunes como cálculos automáticos, manipulación de datos, navegación y gestión de formularios dinámicos.
 
-## 🚀 Características Principales
+## 📋 Resumen de Funciones
 
-- **Cálculos Automáticos**: Configuración fácil de fórmulas en Interactive Grids
-- **Formato Europeo**: Manejo robusto de números con formato europeo (1.234,56)
-- **Refresco Seguro**: Funciones que evitan borrar datos al refrescar
-- **Extracción Avanzada**: Extracción de datos con transformaciones y filtros
-- **Navegación Programática**: Control total sobre la navegación en grids
-- **API Limpia**: Funciones bien documentadas y fáciles de usar
-- **Optimización**: Sistema de debounce para mejor rendimiento
+### 🔢 Cálculos Automáticos
+- **`setupAutoCalculation()`** - Configura cálculos automáticos en Interactive Grids
+- **`setupCantidadPorCosto()`** - Configura multiplicación automática (cantidad × costo = total)
+- **`refreshAutoCalculation()`** - Refresca todos los cálculos automáticos configurados
 
-## 📋 Tabla de Contenidos
+### 📊 Obtener Valores
+- **`getSelectedCellValue()`** - Obtiene valor de la celda seleccionada (última con foco)
+- **`getCurrentRow()`** - Obtiene múltiples campos de la fila con foco como objeto
+- **`getCellValue()`** - Obtiene valor de celda específica por fila y columna
+- **`getNumericCellValue()`** - Obtiene valor numérico con normalización de formato europeo
 
-- [Instalación](#instalación)
-- [🆕 Mejoras en Funciones de Seteo de Valores](#-mejoras-en-funciones-de-seteo-de-valores)
-- [Funciones Principales](#funciones-principales)
-- [APEX Grid Utils](#apex-grid-utils)
-- [Inserción de Datos](#inserción-de-datos)
-- [Utilidades Generales](#utilidades-generales)
-- [Ejemplos de Uso](#ejemplos-de-uso)
-- [Casos de Aplicación](#casos-de-aplicación)
+### ✏️ Establecer Valores
+- **`setSelectedCellValue()`** - Establece valor en la celda seleccionada
+- **`setCellValue()`** - Establece valor en celda específica por fila y columna
+- **`setNumericCellValue()`** - Establece valor numérico con control de decimales
+
+### 🧮 Sumas y Totales
+- **`sumColumnToItem()`** - Suma todos los valores de una columna y los coloca en un item
+- **`sumTotalToItem()`** - Suma la columna TOTAL a un item específico
+
+### 🎯 Navegación
+- **`gotoCell()`** - Navega a una celda específica en el grid
+- **`gotoSelectedCell()`** - Navega a la celda de la fila seleccionada
+- **`gotoFirstCell()`** - Navega a la primera celda de una columna
+
+### 🔄 Refrescar y Actualizar
+- **`refreshGrid()`** - Refresca el grid de manera segura
+- **`commitGridChanges()`** - Confirma cambios en el modelo del grid
+- **`forceRecordDirty()`** - Fuerza el estado "dirty" de un registro
+
+### 📝 Configuración de Datos
+- **`setearDatosIG()`** - Settea datos en Interactive Grid con configuración avanzada
+- **`setearDatosDirectos()`** - Settea datos directamente en el grid
+- **`setearDatos()`** - Settea datos desde un campo JSON de la página
+
+### 🎛️ Utilidades Generales
+- **`habilitarEdicion()`** - Habilita modo edición en Interactive Grid
+- **`extraerDatosIG()`** - Extrae datos del grid con filtros y transformaciones
+- **`normalizeNumber()`** - Normaliza números con formato europeo/latino
+- **`formatToEuropean()`** - Formatea números al formato europeo (1.234,56)
+
+### 🎮 Configuraciones Rápidas
+- **`quick.multiplyColumns()`** - Multiplicación simple (cantidad × precio = total)
+- **`quick.priceWithTax()`** - Precio con IVA automático
+- **`quick.subtotalWithDiscount()`** - Subtotal con descuento automático
+
+### 🔍 Debug y Monitoreo
+- **`debugGrid()`** - Debug completo para monitorear cambios en Interactive Grid
+- **`getAutoCalculationConfig()`** - Obtiene configuración de cálculos automáticos
+- **`getAllAutoCalculationConfigs()`** - Obtiene todas las configuraciones almacenadas
+
+### 🎯 Eventos y Listeners
+- **`setupGridListener()`** - Configura listener externo para cambios en el grid
+- **`setItemOnRowSelect()`** - Settea item de página cuando se selecciona fila
+- **`setItemOnRowOrCellChange()`** - Settea item cuando cambia fila o celda
+
+### 🎪 Sistema de Re-enfoque
+- **`initializeFocusRestoration()`** - Inicializa sistema de re-enfoque automático
+- **`restoreFocus()`** - Restaura el foco en la última celda activa
+- **`getFocusRestorationStatus()`** - Obtiene estado del sistema de re-enfoque
+
+---
 
 ## 🚀 Instalación
 
