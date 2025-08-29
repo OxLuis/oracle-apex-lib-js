@@ -265,6 +265,9 @@ let primerValor = apexGridUtils.getFirstCellValue('mi_grid', 'TOTAL');
 // Obtener valor de fila específica (índice 1 = primera fila)
 let valorFila = apexGridUtils.getCellValue('mi_grid', 'TOTAL', 1);
 
+// Obtener todos los campos de la fila seleccionada como objeto
+let filaCompleta = apexGridUtils.getCurrentRow('mi_grid', ['TOTAL', 'CANTIDAD', 'PRECIO']);
+
 // Obtener valores numéricos (con normalización de formato europeo)
 let valorNumerico = apexGridUtils.getSelectedNumericCellValue('mi_grid', 'TOTAL');
 let valorConDecimales = apexGridUtils.getSelectedNumericCellValueWithDecimals('mi_grid', 'TOTAL', 2);
@@ -295,6 +298,44 @@ let valorConDecimales = apexGridUtils.getNumericCellValueWithDecimals('mi_grid',
 // Obtener valor entero
 let valorEntero = apexGridUtils.getIntegerCellValue('mi_grid', 'TOTAL', 1, 0); // grid, columna, fila1, valorPorDefecto
 ```
+
+#### Obtener Fila Completa
+
+##### getCurrentRow(gridStaticId, columns)
+
+Obtiene todos los campos especificados de la fila que tiene el foco actual en el Interactive Grid, devolviendo un objeto con los valores accesibles por nombre de columna.
+
+```javascript
+// Obtener campos específicos de la fila seleccionada
+let fila = apexGridUtils.getCurrentRow('mi_grid', ['TOTAL', 'CANTIDAD', 'PRECIO']);
+console.log(fila.TOTAL);     // Acceder al valor de TOTAL
+console.log(fila.CANTIDAD);  // Acceder al valor de CANTIDAD
+console.log(fila.PRECIO);    // Acceder al valor de PRECIO
+
+// Obtener un solo campo
+let fila = apexGridUtils.getCurrentRow('mi_grid', ['TOTAL']);
+console.log(fila.TOTAL);     // Acceder al valor de TOTAL
+
+// Ejemplo práctico
+let fila = apexGridUtils.getCurrentRow('IDAutorizacionCanje', ['TOTAL_VALOR', 'TOT_COMPROBANTE', 'COD_ANIMAL']);
+console.log('Total Valor:', fila.TOTAL_VALOR);
+console.log('Total Comprobante:', fila.TOT_COMPROBANTE);
+console.log('Código Animal:', fila.COD_ANIMAL);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columns` (array): Array con los nombres de las columnas a obtener
+
+**Retorna:** `object|null` - Objeto con los valores de las columnas especificadas, o null si no hay fila seleccionada
+
+**Características:**
+- Obtiene la fila que tiene el foco actual (no necesariamente la última seleccionada)
+- Usa `document.activeElement` para detectar la fila activa
+- Mapea automáticamente los nombres de columnas a sus índices
+- Devuelve un objeto con propiedades accesibles por nombre de columna
+- Requiere especificar las columnas que se desean obtener
+- Funciona con cualquier Interactive Grid de APEX
 
 **Parámetros:**
 - `gridStaticId` (string): Static ID del Interactive Grid

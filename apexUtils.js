@@ -1230,6 +1230,85 @@ window.apexGridUtils = (function() {
     }
 
     /**
+     * Obtener todos los campos de la última fila seleccionada como un objeto
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {array} columns - Array de nombres de columnas a obtener (opcional, si no se especifica obtiene todas)
+     * @returns {object|null} - Objeto con todos los campos de la fila o null si no hay fila seleccionada
+     */
+    function getCurrentRow(gridStaticId, columns = null) {
+        try {
+            console.log(`📊 apexGridUtils: Obteniendo fila actual de ${gridStaticId}`);
+            
+            // Usar exactamente tu método que funciona
+            const row = apex.region(gridStaticId).call("getCurrentView");
+            const record = row.getContextRecord(document.activeElement);
+            
+            if (!record || !record[0]) {
+                console.warn(`apexGridUtils: No se pudo obtener el registro de la fila seleccionada`);
+                return null;
+            }
+            
+            console.log(`📊 apexGridUtils: Registro obtenido exitosamente`);
+            
+            // Obtener columnas especificadas por el usuario
+            let columnsToGet = columns;
+            if (!columnsToGet || columnsToGet.length === 0) {
+                console.error(`apexGridUtils: Debes especificar las columnas que necesitas obtener del grid ${gridStaticId}`);
+                return null;
+            }
+            
+            console.log(`📊 apexGridUtils: Columnas a obtener: ${columnsToGet.join(', ')}`);
+            
+            // Crear objeto con todos los campos de la fila
+            const rowData = {};
+            
+            // Obtener las columnas del grid para mapear nombres a índices
+            const gridColumns = [];
+            try {
+                if (row.getColumns) {
+                    const columns = row.getColumns();
+                    columns.forEach((col, index) => {
+                        // Usar col.property que es el nombre real de la columna
+                        if (col.property) {
+                            gridColumns.push({ name: col.property, index: col.index });
+                        }
+                    });
+                }
+            } catch (e) {
+                console.warn(`apexGridUtils: Error al obtener columnas del grid:`, e);
+            }
+            
+            columnsToGet.forEach(columnName => {
+                try {
+                    let value = null;
+                    
+                    // Buscar el índice de la columna por nombre
+                    const columnInfo = gridColumns.find(col => col.name === columnName);
+                    if (columnInfo) {
+                        value = record[0][columnInfo.index];
+                        console.log(`📊 apexGridUtils: ${columnName} (índice ${columnInfo.index}) = ${value}`);
+                    } else {
+                        console.warn(`apexGridUtils: No se encontró la columna ${columnName} en el grid`);
+                        value = null;
+                    }
+                    
+                    rowData[columnName] = value;
+                } catch (error) {
+                    console.warn(`apexGridUtils: Error al obtener valor de columna ${columnName}:`, error);
+                    rowData[columnName] = null;
+                }
+            });
+            
+            console.log(`✅ apexGridUtils: Fila actual obtenida con ${Object.keys(rowData).length} campos:`, rowData);
+            return rowData;
+            
+        } catch (error) {
+            console.error('apexGridUtils getCurrentRow error:', error);
+            return null;
+        }
+    }
+
+    /**
      * Obtener valor de la primera fila (Versión Mejorada)
      * @param {string} gridStaticId - Static ID del Interactive Grid
      * @param {string} columnName - Nombre de la columna
@@ -1900,6 +1979,7 @@ window.apexGridUtils = (function() {
         setFirstCellValue: setFirstCellValue,
         getCellValue: getCellValue,
         getSelectedCellValue: getSelectedCellValue,
+        getCurrentRow: getCurrentRow,
         getFirstCellValue: getFirstCellValue,
         getNumericCellValue: getNumericCellValue,
         getSelectedNumericCellValue: getSelectedNumericCellValue,
