@@ -2474,9 +2474,9 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                 throw new Error('regionId es obligatorio');
             }
             
-            // Obtener el Interactive Grid
-            var ig$ = apex.region(configuracion.regionId).widget().interactiveGrid("getViews", "grid");
-            var model = ig$.model;
+            // Obtener el Interactive Grid usando el método que funciona
+            const grid = apex.region(configuracion.regionId).call("getViews").grid;
+            const model = grid.model;
             
             // Habilitar modo edición si se especifica (por defecto true)
             if (configuracion.modoEdicion !== false) {
@@ -2484,7 +2484,7 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                     // Habilitar edición en el modelo
                     model.setOption("editable", true);
                     // Activar modo edición en la grilla
-                    ig$.setEditMode(true);
+                    grid.setEditMode(true);
                     console.log('apexGridUtils: Modo edición habilitado para:', configuracion.regionId);
                 } catch (editError) {
                     console.warn('apexGridUtils: No se pudo habilitar modo edición:', editError);
@@ -2498,11 +2498,12 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                 // Datos pasados directamente
                 datos = Array.isArray(configuracion.datos) ? configuracion.datos : [configuracion.datos];
             } else if (configuracion.campoOrigen) {
-                // Datos desde un campo de la página
-                var valorCampo = apex.item(configuracion.campoOrigen).getValue();
+                // Datos desde un campo de la página usando $v() como en tu ejemplo
+                var valorCampo = $v(configuracion.campoOrigen);
                 if (valorCampo) {
                     try {
                         datos = JSON.parse(valorCampo);
+                        console.log(`apexGridUtils: Datos obtenidos del item ${configuracion.campoOrigen}:`, datos);
                     } catch (e) {
                         throw new Error('Error al parsear JSON del campo: ' + configuracion.campoOrigen);
                     }
@@ -2555,7 +2556,7 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             var registrosProcesados = 0;
             var registrosConErrores = 0;
             
-            // Insertar cada registro
+            // Insertar cada registro usando el método que funciona
             datos.forEach(function(registro, indice) {
                 try {
                     // Aplicar transformación personalizada si existe
@@ -2573,8 +2574,29 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                     // Mapear campos
                     var registroMapeado = mapearCampos(registro, configuracion.mapeo);
                     
-                    // Insertar registro en el modelo
-                    model.insertNewRecord(registroMapeado);
+                    // Insertar registro usando el patrón que funciona
+                    try {
+                        // Crear nuevo registro vacío
+                        const newRecordId = model.insertNewRecord();
+                        const newRecord = model.getRecord(newRecordId);
+                        
+                        // Setear cada campo usando setValue
+                        Object.keys(registroMapeado).forEach(columnName => {
+                            try {
+                                const value = registroMapeado[columnName];
+                                // Convertir a string si es necesario (como en tu ejemplo)
+                                const finalValue = value !== null && value !== undefined ? value.toString() : null;
+                                model.setValue(newRecord, columnName, finalValue);
+                            } catch (setValueError) {
+                                console.warn(`apexGridUtils: Error al setear campo ${columnName}:`, setValueError);
+                            }
+                        });
+                        
+                    } catch (insertError) {
+                        console.error(`apexGridUtils: Error al insertar registro:`, insertError);
+                        throw insertError;
+                    }
+                    
                     registrosProcesados++;
                     
                 } catch (error) {
@@ -2591,7 +2613,8 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             // Refrescar la grilla si se especifica (por defecto true)
             if (configuracion.refrescar !== false) {
                 try {
-                    ig$.view$.grid('refresh');
+                    // Usar el método que funciona para refrescar
+                    grid.view$.trigger('refresh');
                     console.log('apexGridUtils: Grilla refrescada correctamente');
                 } catch (refreshError) {
                     console.warn('apexGridUtils: No se pudo refrescar la grilla:', refreshError);
