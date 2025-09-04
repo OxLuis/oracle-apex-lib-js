@@ -2053,7 +2053,10 @@ window.apexGridUtils = (function() {
         getFocusRestorationStatus: getFocusRestorationStatus,
         recalculateAllRows: recalculateAllRows,
         setItemOnRowSelect: setItemOnRowSelect,
-        setItemOnRowOrCellChange: setItemOnRowOrCellChange
+        setItemOnRowOrCellChange: setItemOnRowOrCellChange,
+        setValueToSelectedRow: setValueToSelectedRow,
+        selectFirstRowOnInit: selectFirstRowOnInit,
+        syncItemWithGridColumn: syncItemWithGridColumn
     };
 
     // Inicializar el módulo automáticamente
@@ -4871,6 +4874,289 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             return true;
         } catch (error) {
             console.error('apexGridUtils: Error en setItemOnRowOrCellChange:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Asigna un valor a una columna específica de la fila actualmente seleccionada en la grilla.
+     * @param {string} gridStaticId - Static ID del Interactive Grid.
+     * @param {string} columnName - Nombre de la columna donde asignar el valor.
+     * @param {any} value - Valor a asignar.
+     * @returns {boolean} - true si se asignó correctamente, false en caso contrario.
+     */
+    function setValueToSelectedRow(gridStaticId, columnName, value) {
+        try {
+            var region = apex.region(gridStaticId);
+            if (!region || !region.widget) {
+                console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
+                return false;
+            }
+
+            var $ig = region.widget();
+            var view = $ig.interactiveGrid('getViews', 'grid');
+            var model = view.model;
+            
+            // Obtener la fila seleccionada
+            var selectedRecords = view.getSelectedRecords();
+            if (!selectedRecords || selectedRecords.length === 0) {
+                console.warn('apexGridUtils: No hay fila seleccionada en la grilla:', gridStaticId);
+                return false;
+            }
+
+            var record = selectedRecords[0];
+            model.setValue(record, columnName, value);
+            
+            console.log('apexGridUtils: Valor asignado correctamente:', {
+                grid: gridStaticId,
+                column: columnName,
+                value: value
+            });
+            
+            return true;
+        } catch (error) {
+            console.error('apexGridUtils: Error en setValueToSelectedRow:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Selecciona automáticamente la primera fila de la grilla al inicializar.
+     * @param {string} gridStaticId - Static ID del Interactive Grid.
+     * @param {function} callback - Función opcional a ejecutar después de seleccionar la primera fila.
+     * @returns {boolean} - true si se configuró correctamente, false en caso contrario.
+     */
+    function selectFirstRowOnInit(gridStaticId, callback) {
+        try {
+            var region = apex.region(gridStaticId);
+            if (!region || !region.widget) {
+                console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
+                return false;
+            }
+
+            var $ig = region.widget();
+            var view = $ig.interactiveGrid('getViews', 'grid');
+            var model = view.model;
+
+            // Función para seleccionar la primera fila
+            function selectFirstRow() {
+                try {
+                    var records = model.getRecords();
+                    if (records && records.length > 0) {
+                        var firstRecord = records[0];
+                        view.setSelectedRecords([firstRecord]);
+                        
+                        console.log('apexGridUtils: Primera fila seleccionada automáticamente en:', gridStaticId);
+                        
+                        // Ejecutar callback si se proporciona
+                        if (typeof callback === 'function') {
+                            callback(firstRecord);
+                        }
+                        
+                        return true;
+                    } else {
+                        console.warn('apexGridUtils: No hay registros en la grilla:', gridStaticId);
+                        return false;
+                    }
+                } catch (e) {
+                    console.error('apexGridUtils: Error al seleccionar primera fila:', e);
+                    return false;
+                }
+            }
+
+            // Verificar si ya hay datos cargados
+            var records = model.getRecords();
+            if (records && records.length > 0) {
+                // Si ya hay datos, seleccionar inmediatamente
+                selectFirstRow();
+            } else {
+                // Si no hay datos, esperar a que se carguen
+                model.subscribe({
+                    id: 'selectFirstRowOnInit',
+                    onChange: function(type, change) {
+                        if (type === 'add' && model.getRecords().length === 1) {
+                            // Primera vez que se agrega un registro
+                            setTimeout(selectFirstRow, 100); // Pequeño delay para asegurar que la vista esté lista
+                        }
+                    }
+                });
+            }
+
+            return true;
+        } catch (error) {
+            console.error('apexGridUtils: Error en selectFirstRowOnInit:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Sincronización bidireccional entre un item de página y una columna de la grilla.
+     * Cuando cambia el item, actualiza la columna de la fila seleccionada.
+     * Cuando cambia la columna, actualiza el item.
+     * @param {string} gridStaticId - Static ID del Interactive Grid.
+     * @param {string} columnName - Nombre de la columna a sincronizar.
+     * @param {string} itemName - Nombre del item de página a sincronizar.
+     * @param {object} options - Opciones adicionales de configuración.
+     * @returns {boolean} - true si se configuró correctamente, false en caso contrario.
+     */
+    function syncItemWithGridColumn(gridStaticId, columnName, itemName, options) {
+        try {
+            options = options || {};
+            var syncId = 'sync_' + gridStaticId + '_' + columnName + '_' + itemName;
+            
+            var region = apex.region(gridStaticId);
+            if (!region || !region.widget) {
+                console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
+                return false;
+            }
+
+            var $ig = region.widget();
+            var view = $ig.interactiveGrid('getViews', 'grid');
+            var model = view.model;
+
+            // Limpiar listeners previos para evitar duplicados
+            $ig.off('interactivegridselectionchange.' + syncId);
+            model.unsubscribe && model.unsubscribe(syncId);
+
+            // 1. LISTENER: Cambio en el item de página -> Actualizar columna de la fila seleccionada
+            function setupItemToGridSync() {
+                // Usar el evento change del item
+                if (typeof $ === 'function' && $('#' + itemName).length > 0) {
+                    $('#' + itemName).off('change.' + syncId);
+                    $('#' + itemName).on('change.' + syncId, function() {
+                        try {
+                            var itemValue = $(this).val();
+                            var selectedRecords = view.getSelectedRecords();
+                            
+                            if (selectedRecords && selectedRecords.length > 0) {
+                                var record = selectedRecords[0];
+                                model.setValue(record, columnName, itemValue);
+                                
+                                if (options.debug) {
+                                    console.log('apexGridUtils: Item -> Grid sync:', {
+                                        item: itemName,
+                                        value: itemValue,
+                                        column: columnName
+                                    });
+                                }
+                            } else if (options.debug) {
+                                console.warn('apexGridUtils: No hay fila seleccionada para sincronizar item -> grid');
+                            }
+                        } catch (e) {
+                            console.error('apexGridUtils: Error en sync item -> grid:', e);
+                        }
+                    });
+                }
+            }
+
+            // 2. LISTENER: Cambio en la columna de la grilla -> Actualizar item
+            function setupGridToItemSync() {
+                // Listener de selección de fila
+                $ig.on('interactivegridselectionchange.' + syncId, function(event, ui) {
+                    try {
+                        var selectedRecords = ui.selectedRecords;
+                        if (selectedRecords && selectedRecords.length > 0) {
+                            var record = selectedRecords[0];
+                            var value = model.getValue(record, columnName);
+                            
+                            // Actualizar el item sin disparar su evento change
+                            if (typeof $s === 'function') {
+                                $s(itemName, value);
+                            } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
+                                apex.item(itemName).setValue(value);
+                            }
+                            
+                            if (options.debug) {
+                                console.log('apexGridUtils: Grid -> Item sync (selection):', {
+                                    column: columnName,
+                                    value: value,
+                                    item: itemName
+                                });
+                            }
+                        }
+                    } catch (e) {
+                        console.error('apexGridUtils: Error en sync grid -> item (selection):', e);
+                    }
+                });
+
+                // Listener de cambio de celda
+                model.subscribe({
+                    id: syncId,
+                    onChange: function(type, change) {
+                        if (type === 'set' && change.field === columnName) {
+                            try {
+                                var value = model.getValue(change.record, columnName);
+                                
+                                // Solo actualizar el item si el registro cambiado está seleccionado
+                                var selectedRecords = view.getSelectedRecords();
+                                var isSelected = selectedRecords && selectedRecords.some(function(record) {
+                                    return record === change.record;
+                                });
+                                
+                                if (isSelected) {
+                                    // Actualizar el item sin disparar su evento change
+                                    if (typeof $s === 'function') {
+                                        $s(itemName, value);
+                                    } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
+                                        apex.item(itemName).setValue(value);
+                                    }
+                                    
+                                    if (options.debug) {
+                                        console.log('apexGridUtils: Grid -> Item sync (cell change):', {
+                                            column: columnName,
+                                            value: value,
+                                            item: itemName
+                                        });
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('apexGridUtils: Error en sync grid -> item (cell change):', e);
+                            }
+                        }
+                    }
+                });
+            }
+
+            // Configurar ambos listeners
+            setupItemToGridSync();
+            setupGridToItemSync();
+
+            // Sincronización inicial: si hay una fila seleccionada, sincronizar el item
+            setTimeout(function() {
+                try {
+                    var selectedRecords = view.getSelectedRecords();
+                    if (selectedRecords && selectedRecords.length > 0) {
+                        var record = selectedRecords[0];
+                        var value = model.getValue(record, columnName);
+                        
+                        if (typeof $s === 'function') {
+                            $s(itemName, value);
+                        } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
+                            apex.item(itemName).setValue(value);
+                        }
+                        
+                        if (options.debug) {
+                            console.log('apexGridUtils: Sincronización inicial:', {
+                                column: columnName,
+                                value: value,
+                                item: itemName
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.error('apexGridUtils: Error en sincronización inicial:', e);
+                }
+            }, 100);
+
+            console.log('apexGridUtils: Sincronización bidireccional configurada:', {
+                grid: gridStaticId,
+                column: columnName,
+                item: itemName
+            });
+
+            return true;
+        } catch (error) {
+            console.error('apexGridUtils: Error en syncItemWithGridColumn:', error);
             return false;
         }
     }
