@@ -63,6 +63,9 @@ Una biblioteca completa de utilidades para trabajar con Interactive Grids y elem
 - **`setupGridListener()`** - Configura listener externo para cambios en el grid
 - **`setItemOnRowSelect()`** - Settea item de página cuando se selecciona fila
 - **`setItemOnRowOrCellChange()`** - Settea item cuando cambia fila o celda
+- **`setValueToSelectedRow()`** - Asigna valor a columna de la fila seleccionada
+- **`selectFirstRowOnInit()`** - Selecciona automáticamente la primera fila al inicializar
+- **`syncItemWithGridColumn()`** - Sincronización bidireccional entre item y columna de grilla
 
 ### 🎪 Sistema de Re-enfoque
 - **`initializeFocusRestoration()`** - Inicializa sistema de re-enfoque automático
@@ -1648,4 +1651,257 @@ apexGridUtils.setItemOnRowOrCellChange('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_A
 apexGridUtils.setItemOnRowOrCellChange('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
 // o
 apexGridUtils.setItemOnRowSelect('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+```
+
+---
+
+## 🆕 Nuevas Funciones de Asignación y Sincronización
+
+### setValueToSelectedRow(gridStaticId, columnName, value)
+
+Asigna un valor a una columna específica de la fila actualmente seleccionada en la grilla.
+
+```javascript
+// Asignar un valor a la fila seleccionada
+apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'COD_ANIMAL', 'NUEVO_VALOR');
+
+// Asignar valor numérico
+apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'PRECIO', 1.500,50);
+
+// Asignar desde un item de página
+let valor = apex.item('P1_VALOR').getValue();
+apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'COD_ANIMAL', valor);
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna donde asignar el valor
+- `value` (any): Valor a asignar
+
+**Retorna:** `boolean` - true si se asignó correctamente, false en caso contrario
+
+**Características:**
+- ✅ Solo actualiza la fila seleccionada
+- ✅ Manejo de errores robusto
+- ✅ Logging detallado para debugging
+- ✅ Verifica que haya una fila seleccionada antes de asignar
+
+---
+
+### selectFirstRowOnInit(gridStaticId, callback)
+
+Selecciona automáticamente la primera fila de la grilla al inicializar. Útil para mejorar la experiencia del usuario al cargar la página.
+
+```javascript
+// Seleccionar automáticamente la primera fila al inicializar
+apexGridUtils.selectFirstRowOnInit('IG_ANIMALES');
+
+// Con callback para ejecutar código adicional
+apexGridUtils.selectFirstRowOnInit('IG_ANIMALES', function(firstRecord) {
+    console.log('Primera fila seleccionada:', firstRecord);
+    // Aquí puedes ejecutar código adicional
+    apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'ESTADO', 'SELECCIONADO');
+});
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `callback` (function): Función opcional a ejecutar después de seleccionar la primera fila
+
+**Retorna:** `boolean` - true si se configuró correctamente, false en caso contrario
+
+**Características:**
+- ✅ Selección automática al cargar datos
+- ✅ Maneja casos donde los datos se cargan después
+- ✅ Callback opcional para código adicional
+- ✅ Funciona con datos cargados dinámicamente
+
+**Ubicación recomendada:** En el evento "Page Load" de tu página APEX
+
+---
+
+### syncItemWithGridColumn(gridStaticId, columnName, itemName, options)
+
+**Sincronización bidireccional** entre un item de página y una columna de la grilla. Cuando cambias el item, se actualiza la columna de la fila seleccionada, y viceversa.
+
+```javascript
+// Sincronización básica
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+
+// Con debug para ver logs en consola
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX', {
+    debug: true
+});
+
+// Combinado con selección automática de primera fila
+apexGridUtils.selectFirstRowOnInit('IG_ANIMALES');
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+```
+
+**Parámetros:**
+- `gridStaticId` (string): Static ID del Interactive Grid
+- `columnName` (string): Nombre de la columna a sincronizar
+- `itemName` (string): Nombre del item de página a sincronizar
+- `options` (object): Opciones adicionales de configuración
+  - `options.debug` (boolean): Si debe mostrar logs en consola (default: false)
+
+**Retorna:** `boolean` - true si se configuró correctamente, false en caso contrario
+
+**Características:**
+- ✅ **Bidireccional**: Item → Grilla y Grilla → Item
+- ✅ **Automática**: No necesitas código adicional
+- ✅ **Inteligente**: Solo actualiza cuando la fila está seleccionada
+- ✅ **Sin bucles infinitos**: Evita actualizaciones circulares
+- ✅ **Sincronización inicial**: Al cargar, sincroniza el item con la fila seleccionada
+- ✅ **Manejo de errores**: Robusto ante fallos
+
+**Flujo de Funcionamiento:**
+
+1. **Item → Grilla**: 
+   - Usuario cambia el valor en el item `P1100_COD_ANIMAL_AUX`
+   - Se detecta el cambio con el evento `change`
+   - Se obtiene la fila actualmente seleccionada en la grilla
+   - Se actualiza la columna `COD_ANIMAL` de esa fila
+
+2. **Grilla → Item**:
+   - Usuario cambia el valor en la columna `COD_ANIMAL` de la grilla
+   - Se detecta el cambio en el modelo de datos
+   - Se actualiza el item `P1100_COD_ANIMAL_AUX`
+   - También funciona cuando seleccionas otra fila (se sincroniza automáticamente)
+
+**Ubicación recomendada:** En el evento "Page Load" de tu página APEX
+
+---
+
+## 🎯 Casos de Uso Completos
+
+### Caso 1: Formulario con Grilla Sincronizada
+
+```javascript
+// En Page Load
+// 1. Seleccionar primera fila automáticamente
+apexGridUtils.selectFirstRowOnInit('IG_ANIMALES');
+
+// 2. Configurar sincronización bidireccional
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+
+// 3. Configurar sincronización para otros campos
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'NOMBRE', 'P1100_NOMBRE_AUX');
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'PRECIO', 'P1100_PRECIO_AUX');
+```
+
+### Caso 2: Asignación Programática de Valores
+
+```javascript
+// Asignar valores desde procesos APEX
+function asignarValoresDesdeProceso() {
+    // Obtener valores de items
+    let codigo = apex.item('P1_CODIGO').getValue();
+    let nombre = apex.item('P1_NOMBRE').getValue();
+    let precio = apex.item('P1_PRECIO').getValue();
+    
+    // Asignar a la fila seleccionada
+    apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'COD_ANIMAL', codigo);
+    apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'NOMBRE', nombre);
+    apexGridUtils.setValueToSelectedRow('IG_ANIMALES', 'PRECIO', precio);
+}
+```
+
+### Caso 3: Inicialización Completa
+
+```javascript
+// En Page Load - Configuración completa
+function inicializarGrilla() {
+    // 1. Seleccionar primera fila
+    apexGridUtils.selectFirstRowOnInit('IG_ANIMALES', function(firstRecord) {
+        console.log('Primera fila seleccionada automáticamente');
+        
+        // 2. Configurar sincronización
+        apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX');
+        
+        // 3. Configurar cálculos automáticos
+        apexGridUtils.setupAutoCalculation('IG_ANIMALES', {
+            sourceColumns: ['CANTIDAD', 'PRECIO'],
+            targetColumn: 'TOTAL',
+            formula: function(values) {
+                return values.CANTIDAD * values.PRECIO;
+            },
+            decimalPlaces: 2
+        });
+    });
+}
+
+// Ejecutar inicialización
+inicializarGrilla();
+```
+
+### Caso 4: Debug y Monitoreo
+
+```javascript
+// Configurar con debug para monitorear sincronización
+apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANIMAL_AUX', {
+    debug: true
+});
+
+// Los logs aparecerán en la consola del navegador:
+// apexGridUtils: Sincronización bidireccional configurada: {grid: "IG_ANIMALES", column: "COD_ANIMAL", item: "P1100_COD_ANIMAL_AUX"}
+// apexGridUtils: Item -> Grid sync: {item: "P1100_COD_ANIMAL_AUX", value: "NUEVO_VALOR", column: "COD_ANIMAL"}
+// apexGridUtils: Grid -> Item sync (selection): {column: "COD_ANIMAL", value: "VALOR_GRID", item: "P1100_COD_ANIMAL_AUX"}
+```
+
+---
+
+## ⚠️ Consideraciones Importantes
+
+### Timing de Ejecución
+- **Page Load**: Ubicación recomendada para todas estas funciones
+- **After Refresh**: Alternativa si Page Load no funciona
+- **Delay**: Las funciones incluyen delays automáticos para asegurar que el grid esté listo
+
+### Compatibilidad
+- ✅ **APEX 18.1+**: Compatible con todas las versiones modernas
+- ✅ **Interactive Grids**: Funciona con todos los tipos de Interactive Grids
+- ✅ **Múltiples Grids**: Funciona simultáneamente con múltiples grids
+- ✅ **Navegadores**: Compatible con Chrome, Firefox, Safari, Edge
+
+### Solución de Problemas
+
+#### La sincronización no funciona
+```javascript
+// Verificar que el grid esté cargado
+var region = apex.region('IG_ANIMALES');
+if (!region || !region.widget) {
+    console.error('Grid no encontrado');
+}
+
+// Verificar que el item exista
+if (!$('#' + 'P1100_COD_ANIMAL_AUX').length) {
+    console.error('Item no encontrado');
+}
+```
+
+#### La primera fila no se selecciona
+```javascript
+// Usar callback para verificar
+apexGridUtils.selectFirstRowOnInit('IG_ANIMALES', function(firstRecord) {
+    if (firstRecord) {
+        console.log('Primera fila seleccionada correctamente');
+    } else {
+        console.warn('No se pudo seleccionar la primera fila');
+    }
+});
+```
+
+#### Valores no se asignan correctamente
+```javascript
+// Verificar que haya una fila seleccionada
+var region = apex.region('IG_ANIMALES');
+var view = region.widget().interactiveGrid('getViews', 'grid');
+var selectedRecords = view.getSelectedRecords();
+
+if (!selectedRecords || selectedRecords.length === 0) {
+    console.warn('No hay fila seleccionada');
+    // Seleccionar primera fila primero
+    apexGridUtils.selectFirstRowOnInit('IG_ANIMALES');
+}
 ```
