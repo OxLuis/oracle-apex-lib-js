@@ -2583,12 +2583,43 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                         const newRecordId = model.insertNewRecord();
                         const newRecord = model.getRecord(newRecordId);
                         
-                        // Setear cada campo usando setValue
+                        // Setear cada campo usando setValue (soporte para Popup LOV)
                         Object.keys(registroMapeado).forEach(columnName => {
                             try {
                                 const value = registroMapeado[columnName];
-                                // Convertir a string si es necesario (como en tu ejemplo)
-                                const finalValue = value !== null && value !== undefined ? value.toString() : null;
+
+                                // Detectar configuración de Popup LOV
+                                const isPopupLov = Array.isArray(configuracion.popupLovColumns)
+                                    ? configuracion.popupLovColumns.map(c => c.toUpperCase()).includes(columnName.toUpperCase())
+                                    : false;
+                                const lovDisplayMaps = configuracion.lovDisplayMaps || {};
+                                const lovMapForColumn = lovDisplayMaps[columnName] || lovDisplayMaps[columnName && columnName.toUpperCase()] || null;
+
+                                let finalValue = null;
+
+                                if (value === null || value === undefined) {
+                                    finalValue = null;
+                                } else if (typeof value === 'object' && (value.hasOwnProperty('v') || value.hasOwnProperty('d'))) {
+                                    // Si ya viene en formato {v, d}
+                                    const v = value.v;
+                                    const d = value.d != null ? value.d : value.v;
+                                    finalValue = { v: v, d: d };
+                                } else if (isPopupLov) {
+                                    // Si es Popup LOV y solo tenemos el valor, intentar resolver display
+                                    const v = value;
+                                    let d = null;
+                                    if (lovMapForColumn && Object.prototype.hasOwnProperty.call(lovMapForColumn, v)) {
+                                        d = lovMapForColumn[v];
+                                    } else {
+                                        // Fallback: usar el mismo valor como display
+                                        d = v;
+                                    }
+                                    finalValue = { v: v, d: d };
+                                } else {
+                                    // Comportamiento por defecto (string)
+                                    finalValue = value != null ? value.toString() : null;
+                                }
+
                                 model.setValue(newRecord, columnName, finalValue);
                             } catch (setValueError) {
                                 console.warn(`apexGridUtils: Error al setear campo ${columnName}:`, setValueError);
@@ -4833,12 +4864,14 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             var view = $ig.interactiveGrid('getViews', 'grid');
             var model = view.model;
 
+            var listenerId = 'setItemOnRowOrCellChange_' + gridStaticId + '_' + columnName + '_' + itemName;
+
             // Limpia listeners previos
-            $ig.off('interactivegridselectionchange.setItemOnRowSelect');
-            model.unsubscribe && model.unsubscribe('setItemOnRowSelect');
+            $ig.off('interactivegridselectionchange.' + listenerId);
+            model.unsubscribe && model.unsubscribe(listenerId);
 
             // Listener de selección de fila
-            $ig.on('interactivegridselectionchange.setItemOnRowSelect', function(event, ui) {
+            $ig.on('interactivegridselectionchange.' + listenerId, function(event, ui) {
                 try {
                     var selectedRecords = ui.selectedRecords;
                     if (selectedRecords && selectedRecords.length > 0) {
@@ -4857,7 +4890,7 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
 
             // Listener de cambio de celda
             model.subscribe({
-                id: 'setItemOnRowSelect',
+                id: listenerId,
                 onChange: function(type, change) {
                     if (type === 'set' && change.field === columnName) {
                         // Obtener el registro afectado
@@ -4887,18 +4920,17 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
      */
     function setValueToSelectedRow(gridStaticId, columnName, value) {
         try {
-            var region = apex.region(gridStaticId);
-            if (!region || !region.widget) {
+            // Obtener el Interactive Grid usando el método que funciona (como setearDatosIG)
+            var grid = apex.region(gridStaticId).call("getViews").grid;
+            if (!grid) {
                 console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
                 return false;
             }
 
-            var $ig = region.widget();
-            var view = $ig.interactiveGrid('getViews', 'grid');
-            var model = view.model;
+            var model = grid.model;
             
             // Obtener la fila seleccionada
-            var selectedRecords = view.getSelectedRecords();
+            var selectedRecords = grid.getSelectedRecords();
             if (!selectedRecords || selectedRecords.length === 0) {
                 console.warn('apexGridUtils: No hay fila seleccionada en la grilla:', gridStaticId);
                 return false;
@@ -4928,15 +4960,16 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
      */
     function selectFirstRowOnInit(gridStaticId, callback) {
         try {
-            var region = apex.region(gridStaticId);
-            if (!region || !region.widget) {
+            // Obtener el Interactive Grid usando el método que funciona (como setearDatosIG)
+            var grid = apex.region(gridStaticId).call("getViews").grid;
+            if (!grid) {
                 console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
                 return false;
             }
 
-            var $ig = region.widget();
-            var view = $ig.interactiveGrid('getViews', 'grid');
-            var model = view.model;
+            var model = grid.model;
+            var subId = 'selectFirstRowOnInit_' + gridStaticId;
+            try { model.unsubscribe && model.unsubscribe(subId); } catch(e) {}
 
             // Función para seleccionar la primera fila
             function selectFirstRow() {
@@ -4944,7 +4977,7 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                     var records = model.getRecords();
                     if (records && records.length > 0) {
                         var firstRecord = records[0];
-                        view.setSelectedRecords([firstRecord]);
+                        grid.setSelectedRecords([firstRecord]);
                         
                         console.log('apexGridUtils: Primera fila seleccionada automáticamente en:', gridStaticId);
                         
@@ -4972,7 +5005,7 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             } else {
                 // Si no hay datos, esperar a que se carguen
                 model.subscribe({
-                    id: 'selectFirstRowOnInit',
+                    id: subId,
                     onChange: function(type, change) {
                         if (type === 'add' && model.getRecords().length === 1) {
                             // Primera vez que se agrega un registro
@@ -5003,34 +5036,48 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
         try {
             options = options || {};
             var syncId = 'sync_' + gridStaticId + '_' + columnName + '_' + itemName;
+            var isSyncing = false; // Evitar bucles item <-> grid
             
-            var region = apex.region(gridStaticId);
-            if (!region || !region.widget) {
+            // Obtener el Interactive Grid usando el método que funciona (como setearDatosIG)
+            var grid = apex.region(gridStaticId).call("getViews").grid;
+            if (!grid) {
                 console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
                 return false;
             }
 
-            var $ig = region.widget();
-            var view = $ig.interactiveGrid('getViews', 'grid');
-            var model = view.model;
+            var model = grid.model;
+
+            // Registro idempotente en el modelo para evitar múltiples bindings
+            if (!model._apxGridSyncs) { model._apxGridSyncs = {}; }
+            // Limpiar bindings previos si existen para esta clave
+            if (model._apxGridSyncs[syncId] && typeof model._apxGridSyncs[syncId].cleanup === 'function') {
+                try { model._apxGridSyncs[syncId].cleanup(); } catch(e) { /* noop */ }
+            }
 
             // Limpiar listeners previos para evitar duplicados
-            $ig.off('interactivegridselectionchange.' + syncId);
+            if (grid.view$ && grid.view$.off) {
+                grid.view$.off('interactivegridselectionchange.' + syncId);
+            }
             model.unsubscribe && model.unsubscribe(syncId);
 
             // 1. LISTENER: Cambio en el item de página -> Actualizar columna de la fila seleccionada
-            function setupItemToGridSync() {
+            var itemChangeUnbind = null;
+            var setupItemToGridSync = function() {
                 // Usar el evento change del item
-                if (typeof $ === 'function' && $('#' + itemName).length > 0) {
-                    $('#' + itemName).off('change.' + syncId);
-                    $('#' + itemName).on('change.' + syncId, function() {
+                var $item = (typeof $ === 'function') ? $('#' + itemName) : null;
+                if ($item && $item.length > 0) {
+                    $item.off('change.' + syncId);
+                    $item.on('change.' + syncId, function() {
                         try {
-                            var itemValue = $(this).val();
-                            var selectedRecords = view.getSelectedRecords();
+                            if (isSyncing) { return; }
+                            var itemValue = (window.apex && apex.item) ? apex.item(itemName).getValue() : $(this).val();
+                            var selectedRecords = grid.getSelectedRecords && grid.getSelectedRecords();
                             
                             if (selectedRecords && selectedRecords.length > 0) {
                                 var record = selectedRecords[0];
+                                isSyncing = true;
                                 model.setValue(record, columnName, itemValue);
+                                isSyncing = false;
                                 
                                 if (options.debug) {
                                     console.log('apexGridUtils: Item -> Grid sync:', {
@@ -5044,15 +5091,17 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                             }
                         } catch (e) {
                             console.error('apexGridUtils: Error en sync item -> grid:', e);
+                            isSyncing = false;
                         }
                     });
+                    itemChangeUnbind = function() { try { $item.off('change.' + syncId); } catch(e) {} };
                 }
-            }
+            };
 
             // 2. LISTENER: Cambio en la columna de la grilla -> Actualizar item
-            function setupGridToItemSync() {
+            var setupGridToItemSync = function() {
                 // Listener de selección de fila
-                $ig.on('interactivegridselectionchange.' + syncId, function(event, ui) {
+                if (grid.view$ && grid.view$.on) grid.view$.on('interactivegridselectionchange.' + syncId, function(event, ui) {
                     try {
                         var selectedRecords = ui.selectedRecords;
                         if (selectedRecords && selectedRecords.length > 0) {
@@ -5060,11 +5109,13 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                             var value = model.getValue(record, columnName);
                             
                             // Actualizar el item sin disparar su evento change
+                            isSyncing = true;
                             if (typeof $s === 'function') {
                                 $s(itemName, value);
                             } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
                                 apex.item(itemName).setValue(value);
                             }
+                            isSyncing = false;
                             
                             if (options.debug) {
                                 console.log('apexGridUtils: Grid -> Item sync (selection):', {
@@ -5076,6 +5127,7 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                         }
                     } catch (e) {
                         console.error('apexGridUtils: Error en sync grid -> item (selection):', e);
+                        isSyncing = false;
                     }
                 });
 
@@ -5088,18 +5140,20 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                                 var value = model.getValue(change.record, columnName);
                                 
                                 // Solo actualizar el item si el registro cambiado está seleccionado
-                                var selectedRecords = view.getSelectedRecords();
+                                var selectedRecords = grid.getSelectedRecords();
                                 var isSelected = selectedRecords && selectedRecords.some(function(record) {
                                     return record === change.record;
                                 });
                                 
                                 if (isSelected) {
                                     // Actualizar el item sin disparar su evento change
+                                    isSyncing = true;
                                     if (typeof $s === 'function') {
                                         $s(itemName, value);
                                     } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
                                         apex.item(itemName).setValue(value);
                                     }
+                                    isSyncing = false;
                                     
                                     if (options.debug) {
                                         console.log('apexGridUtils: Grid -> Item sync (cell change):', {
@@ -5111,11 +5165,12 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                                 }
                             } catch (e) {
                                 console.error('apexGridUtils: Error en sync grid -> item (cell change):', e);
+                                isSyncing = false;
                             }
                         }
                     }
                 });
-            }
+            };
 
             // Configurar ambos listeners
             setupItemToGridSync();
@@ -5124,16 +5179,18 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             // Sincronización inicial: si hay una fila seleccionada, sincronizar el item
             setTimeout(function() {
                 try {
-                    var selectedRecords = view.getSelectedRecords();
+                    var selectedRecords = grid.getSelectedRecords && grid.getSelectedRecords();
                     if (selectedRecords && selectedRecords.length > 0) {
                         var record = selectedRecords[0];
                         var value = model.getValue(record, columnName);
                         
+                        isSyncing = true;
                         if (typeof $s === 'function') {
                             $s(itemName, value);
                         } else if (window.apex && apex.item && typeof apex.item(itemName).setValue === 'function') {
                             apex.item(itemName).setValue(value);
                         }
+                        isSyncing = false;
                         
                         if (options.debug) {
                             console.log('apexGridUtils: Sincronización inicial:', {
@@ -5147,6 +5204,15 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
                     console.error('apexGridUtils: Error en sincronización inicial:', e);
                 }
             }, 100);
+
+            // Guardar cleanup idempotente
+            model._apxGridSyncs[syncId] = {
+                cleanup: function() {
+                    try { model.unsubscribe && model.unsubscribe(syncId); } catch(e) {}
+                    try { if (grid.view$ && grid.view$.off) { grid.view$.off('interactivegridselectionchange.' + syncId); } } catch(e) {}
+                    try { if (itemChangeUnbind) { itemChangeUnbind(); } } catch(e) {}
+                }
+            };
 
             console.log('apexGridUtils: Sincronización bidireccional configurada:', {
                 grid: gridStaticId,
