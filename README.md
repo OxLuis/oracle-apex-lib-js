@@ -66,7 +66,6 @@ Una biblioteca completa de utilidades para trabajar con Interactive Grids y elem
 - **`setValueToSelectedRow()`** - Asigna valor a columna de la fila seleccionada
 - **`selectFirstRowOnInit()`** - Selecciona automáticamente la primera fila al inicializar
 - **`syncItemWithGridColumn()`** - Sincronización bidireccional entre item y columna de grilla
- - **`setUppercaseColumns()`** - Fuerza que ciertas columnas se guarden en MAYÚSCULAS
 
 ### 🎪 Sistema de Re-enfoque
 - **`initializeFocusRestoration()`** - Inicializa sistema de re-enfoque automático
@@ -1774,39 +1773,7 @@ apexGridUtils.syncItemWithGridColumn('IG_ANIMALES', 'COD_ANIMAL', 'P1100_COD_ANI
 
 ---
 
-## 🔠 Forzar Mayúsculas en Columnas
-
-### setUppercaseColumns(gridStaticId, columns, options)
-
-Fuerza que los valores ingresados en determinadas columnas del Interactive Grid se conviertan a MAYÚSCULAS en el modelo, evitando tener que agregar lógica por columna.
-
-```javascript
-// Básico: forzar mayúsculas en SERIE y NUMERO
-apexGridUtils.setUppercaseColumns('IG_TRANSACCIONES', ['SERIE', 'NUMERO']);
-
-// Sin recortar espacios antes (upperTrim: false)
-apexGridUtils.setUppercaseColumns('IG_TRANSACCIONES', ['OBSERVACION'], { upperTrim: false });
-
-// Múltiples columnas y grillas
-apexGridUtils.setUppercaseColumns('IG_CLIENTES', ['NOMBRE', 'APELLIDO']);
-apexGridUtils.setUppercaseColumns('IG_PRODUCTOS', ['DESCRIPCION']);
-```
-
-**Parámetros:**
-- `gridStaticId` (string): Static ID del Interactive Grid
-- `columns` (string[]): Nombres de columnas a forzar en mayúsculas (case-insensitive)
-- `options.upperTrim` (boolean): Si recorta espacios antes de convertir (default: `true`)
-
-**Características:**
-- ✅ Idempotente: limpia suscripciones previas para evitar duplicados
-- ✅ Actúa en tiempo real al cambiar el valor en el modelo (evento `set`)
-- ✅ Afecta solo strings; ignora null/undefined y tipos no string
-
-**Recomendación de uso:** Colocar en "Execute when Page Loads" de la página que contiene el IG.
-
-**Alias compatible:** También disponible como `enforceUppercaseColumns(...)`.
-
----
+ 
 
 ## 🎯 Casos de Uso Completos
 

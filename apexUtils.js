@@ -1127,6 +1127,43 @@ window.apexGridUtils = (function() {
     }
 
     /**
+     * Limpiar múltiples celdas seleccionadas estableciendo valores vacíos
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {string[]} columnNames - Array de nombres de columnas a limpiar
+     * @param {any} value - Valor a establecer (default: '')
+     * @param {boolean} refresh - Si debe refrescar la vista (default: true)
+     * @returns {boolean} - true si todas las celdas se limpiaron correctamente
+     */
+    function cleanSelectedCellValues(gridStaticId, columnNames, value = '', refresh = true) {
+        if (!Array.isArray(columnNames) || columnNames.length === 0) {
+            console.warn('apexGridUtils: cleanSelectedCellValues - columnNames debe ser un array no vacío');
+            return false;
+        }
+
+        let allSuccess = true;
+        
+        try {
+            columnNames.forEach(columnName => {
+                const success = setCellValue(gridStaticId, columnName, -1, value, false);
+                if (!success) {
+                    allSuccess = false;
+                    console.warn(`apexGridUtils: Error limpiando columna ${columnName}`);
+                }
+            });
+
+            // Refrescar solo una vez al final si se solicitó
+            if (refresh && allSuccess) {
+                refreshGridViewOnly(gridStaticId);
+            }
+
+            return allSuccess;
+        } catch (error) {
+            console.error('apexGridUtils: Error en cleanSelectedCellValues:', error);
+            return false;
+        }
+    }
+
+    /**
      * Setear valor en la primera fila (Versión Mejorada)
      * @param {string} gridStaticId - Static ID del Interactive Grid
      * @param {string} columnName - Nombre de la columna
@@ -1976,6 +2013,7 @@ window.apexGridUtils = (function() {
         gotoSelectedCell: gotoSelectedCell,
         setCellValue: setCellValue,
         setSelectedCellValue: setSelectedCellValue,
+        cleanSelectedCellValues: cleanSelectedCellValues,
         setFirstCellValue: setFirstCellValue,
         getCellValue: getCellValue,
         getSelectedCellValue: getSelectedCellValue,
@@ -2056,9 +2094,7 @@ window.apexGridUtils = (function() {
         setItemOnRowOrCellChange: setItemOnRowOrCellChange,
         setValueToSelectedRow: setValueToSelectedRow,
         selectFirstRowOnInit: selectFirstRowOnInit,
-        syncItemWithGridColumn: syncItemWithGridColumn,
-        setUppercaseColumns: setUppercaseColumns,
-        enforceUppercaseColumns: enforceUppercaseColumns
+        syncItemWithGridColumn: syncItemWithGridColumn
     };
 
     // Inicializar el módulo automáticamente
@@ -5229,82 +5265,4 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
         }
     }
 
-    /**
-     * Forzar mayúsculas en columnas específicas de un Interactive Grid
-     * @param {string} gridStaticId - Static ID del Interactive Grid
-     * @param {string[]} columns - Array de nombres de columnas a forzar en mayúsculas
-     * @param {object} options - Opciones adicionales
-     * @param {boolean} options.upperTrim - Si debe recortar espacios antes de upper (default: true)
-     * @returns {boolean}
-     */
-    function setUppercaseColumns(gridStaticId, columns, options) {
-        try {
-            if (!gridStaticId || !Array.isArray(columns) || columns.length === 0) {
-                console.error('apexGridUtils: enforceUppercaseColumns requiere gridStaticId y columns');
-                return false;
-            }
-
-            options = options || {};
-            var upperTrim = options.upperTrim !== false; // por defecto true
-
-            var grid = apex.region(gridStaticId).call("getViews").grid;
-            if (!grid) {
-                console.error('apexGridUtils: Grid no encontrado para', gridStaticId);
-                return false;
-            }
-            var model = grid.model;
-
-            var fields = columns.map(function(c){ return (c || '').toUpperCase(); });
-            var subId = 'uppercase_' + gridStaticId + '_' + fields.join('_');
-
-            // Evitar duplicados: desuscribir si ya existe
-            try { model.unsubscribe && model.unsubscribe(subId); } catch(e) {}
-            if (!model._apxUpperSubs) { model._apxUpperSubs = {}; }
-            if (typeof model._apxUpperSubs[subId] === 'function') {
-                try { model._apxUpperSubs[subId](); } catch(e) {}
-            }
-
-            var reentrant = false;
-            model.subscribe({
-                id: subId,
-                onChange: function(type, change) {
-                    try {
-                        if (type !== 'set') { return; }
-                        var field = (change && change.field || '').toUpperCase();
-                        if (fields.indexOf(field) === -1) { return; }
-                        if (reentrant) { return; }
-
-                        var current = model.getValue(change.record, change.field);
-                        if (current == null) { return; }
-                        if (typeof current !== 'string') { return; }
-
-                        var transformed = upperTrim ? current.trim().toUpperCase() : current.toUpperCase();
-                        if (transformed !== current) {
-                            reentrant = true;
-                            model.setValue(change.record, change.field, transformed);
-                            reentrant = false;
-                        }
-                    } catch (e) {
-                        reentrant = false;
-                        console.warn('apexGridUtils: Error en enforceUppercaseColumns onChange:', e);
-                    }
-                }
-            });
-
-            // Guardar cleanup para idempotencia
-            model._apxUpperSubs[subId] = function() {
-                try { model.unsubscribe && model.unsubscribe(subId); } catch(e) {}
-            };
-
-            console.log('apexGridUtils: Mayúsculas habilitadas para', { grid: gridStaticId, columns: fields });
-            return true;
-        } catch (error) {
-            console.error('apexGridUtils: Error en enforceUppercaseColumns:', error);
-            return false;
-        }
-    }
-
-    // Alias de compatibilidad hacia atrás
-    function enforceUppercaseColumns(gridStaticId, columns, options) {
-        return setUppercaseColumns(gridStaticId, columns, options);
-    }
+    
