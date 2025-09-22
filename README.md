@@ -1435,6 +1435,85 @@ apexGridUtils.setearDatosIG({
 });
 ```
 
+## 🔄 Sincronización Grid ↔ Items
+
+### syncGridToItem(gridStaticId, columnName, itemName, options)
+
+Sincroniza de Grid → Item. Al seleccionar una fila o cambiar la celda en la fila seleccionada, el valor de la columna `columnName` se copia en el item `itemName`.
+
+Opciones:
+- `debug` (boolean): habilita logs en consola.
+
+Ejemplo:
+```javascript
+apexGridUtils.syncGridToItem('IG_TRANSACCIONES', 'SER_COMPROBANTE', 'P1194_SER_COMPROBANTE', {
+  debug: true
+});
+```
+
+Notas:
+- Si la columna del IG es Popup LOV y el modelo devuelve `{v, d}`, se toma automáticamente `v` para setear en el item.
+
+### syncItemToGrid(gridStaticId, columnName, itemName, options)
+
+Sincroniza de Item → Grid. Al cambiar el item `itemName`, se escribe el valor en la columna `columnName` de la fila seleccionada del IG.
+
+Opciones:
+- `debug` (boolean)
+- `pushInitial` (boolean): si es `true`, al inicializar empuja el valor actual del item hacia la fila seleccionada.
+- `asPopupLov` (boolean): si es `true`, escribe en el IG con formato `{v, d}` (útil cuando la columna del IG es Popup LOV).
+
+Ejemplos:
+```javascript
+// Valor simple (columna no LOV)
+apexGridUtils.syncItemToGrid('IG_TRANSACCIONES', 'SER_COMPROBANTE', 'P1194_SER_COMPROBANTE', { debug: true });
+
+// Columna Popup LOV: enviar {v, d}
+apexGridUtils.syncItemToGrid('IG_TRANSACCIONES', 'COD_CLIENTE', 'P1194_COD_CLIENTE', {
+  debug: true,
+  asPopupLov: true
+});
+
+// Empujar el valor inicial del item a la fila seleccionada
+apexGridUtils.syncItemToGrid('IG_TRANSACCIONES', 'COD_CLIENTE', 'P1194_COD_CLIENTE', {
+  debug: true,
+  asPopupLov: true,
+  pushInitial: true
+});
+```
+
+Notas:
+- Para Popup LOV se intenta obtener el display (`d`) desde el item; si no está disponible, se usa `v` como `d`.
+
+### syncGridItemValues(gridStaticId, columnName, itemName, options)
+
+Sincronización bidireccional Grid ↔ Item. Combina `syncGridToItem` y `syncItemToGrid` en una sola llamada.
+
+Opciones:
+- `debug` (boolean)
+- `asPopupLov` (boolean): cuando el item cambia se envía `{v, d}` al IG.
+- `pushInitialGridToItem` (boolean): si `true` (default), copia el valor del IG → item al iniciar.
+- `pushInitialItemToGrid` (boolean): si `true`, empuja el valor del item → IG al iniciar.
+
+Ejemplos:
+```javascript
+// Bidireccional, valores simples
+apexGridUtils.syncGridItemValues('IG_TRANSACCIONES', 'SER_COMPROBANTE', 'P1194_SER_COMPROBANTE', { debug: true });
+
+// Bidireccional con Popup LOV
+apexGridUtils.syncGridItemValues('IG_TRANSACCIONES', 'TIP_COMPROBANTE', 'P1194_TIP_COMPROBANTE', {
+  debug: true,
+  asPopupLov: true,
+  pushInitialGridToItem: true,
+  pushInitialItemToGrid: false
+});
+```
+
+Notas importantes:
+- Grid → Item siempre normaliza a `v` cuando la celda del IG devuelve `{v, d}`.
+- Si no hay fila seleccionada, Item → Grid no ejecuta cambios hasta que selecciones una fila.
+- Las funciones limpian listeners previos para evitar duplicados si se invocan múltiples veces.
+
 **Parámetros:**
 - `configuracion.regionId` (string): ID de la región del Interactive Grid
 - `configuracion.datos` (array|object): Datos a insertar (opcional si se usa campoOrigen)
