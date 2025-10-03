@@ -1082,6 +1082,49 @@ let subtotal = valores[1];
 - Aplica el mismo valor por defecto a todos los items
 - Útil para obtener varios valores relacionados de una vez
 
+## 🧩 Seteo masivo de valores en Interactive Grid
+
+### apexGridUtils.setAllRowsValue(gridStaticId, targetColumn, valueOrFormula, options)
+
+Setea un valor o cálculo en todas las filas de la columna `targetColumn`, asegurando persistencia en APEX (patrón null → string). Útil cuando APEX solo guarda si recibe string.
+
+Parámetros:
+- `gridStaticId` (string): Static ID del IG
+- `targetColumn` (string): Columna a setear
+- `valueOrFormula` (any|function): Valor fijo o función `(record, index, model) => valor`
+- `options` (object):
+  - `decimalPlaces` (number|null): Formatea números antes de convertirlos a string
+  - `commit` (boolean): Confirma cambios por registro (default: true)
+  - `refresh` (boolean): Refresca la vista al finalizar (default: true)
+  - `onlyEditable` (boolean): Solo filas editables (default: true)
+
+Ejemplo (repartir precio unitario):
+```javascript
+const totalPrecio = parseFloat(apex.item('P1194_TOTAL_PESO_LIQUIDACION').getValue()) || 0;
+const cantidadAnimales = parseFloat(apex.item('P1194_CANT_ANIMALES').getValue()) || 0;
+if (cantidadAnimales === 0) { apex.message.alert('La cantidad de animales no puede ser cero'); return; }
+const precioUnitario = totalPrecio / cantidadAnimales;
+
+apexGridUtils.setAllRowsValue('IG_DETALLE', 'PESO_LIQUIDACION', () => precioUnitario, {
+  decimalPlaces: null,   // o 2 si deseas redondear
+  commit: true,
+  refresh: true,
+  onlyEditable: true
+});
+```
+
+### Versión corta: apexGridUtils.setAllRowsFixed(gridStaticId, targetColumn, value, options)
+
+Setea el mismo valor fijo en todas las filas (atajo de `setAllRowsValue`).
+
+```javascript
+// Setear el mismo valor fijo en todas las filas
+apexGridUtils.setAllRowsFixed('IG_DETALLE', 'PESO_LIQUIDACION', '123.45', {
+  commit: true,
+  refresh: true
+});
+```
+
 ## 📝 Ejemplos de Uso Completos
 
 ### Ejemplo 1: Factura con Cálculos Automáticos

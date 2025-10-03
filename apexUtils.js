@@ -2090,6 +2090,8 @@ window.apexGridUtils = (function() {
         clearLastFocusedCell: clearLastFocusedCell,
         getFocusRestorationStatus: getFocusRestorationStatus,
         recalculateAllRows: recalculateAllRows,
+        setAllRowsValue: setAllRowsValue,
+        setAllRowsFixed: setAllRowsFixed,
         setItemOnRowSelect: setItemOnRowSelect,
         setItemOnRowOrCellChange: setItemOnRowOrCellChange,
         setValueToSelectedRow: setValueToSelectedRow,
@@ -4842,6 +4844,106 @@ function setFirstNumericCellValueWithCommit(gridStaticId, columnName, value, dec
             
         }, delay);
         
+    }
+
+    /**
+     * Setear un valor o cálculo en todas las filas del IG, usando seteo como string
+     * y un seteo "dummy" previo (null) para asegurar que APEX persista el cambio.
+     * @param {string} gridStaticId - Static ID del Interactive Grid
+     * @param {string} targetColumn - Columna destino a setear
+     * @param {any|function} valueOrFormula - Valor fijo o función (record, index, model) => valor
+     * @param {object} options - Opciones
+     * @param {number|null} options.decimalPlaces - Si es número, formatea con decimales antes de toString (default: null)
+     * @param {boolean} options.commit - Confirmar cambios por registro (default: true)
+     * @param {boolean} options.refresh - Refrescar vista al final (default: true)
+     * @param {boolean} options.onlyEditable - Solo filas editables (default: true)
+     * @returns {boolean} - true si se procesó sin errores graves
+     */
+    function setAllRowsValue(gridStaticId, targetColumn, valueOrFormula, options) {
+        try {
+            options = options || {};
+            const decimalPlaces = (typeof options.decimalPlaces === 'number') ? options.decimalPlaces : null;
+            const doCommit = options.commit !== false; // default true
+            const doRefresh = options.refresh !== false; // default true
+            const onlyEditable = options.onlyEditable !== false; // default true
+
+            const region = apex.region(gridStaticId);
+            const $ig = region && region.widget ? region.widget() : null;
+            if (!$ig) {
+                console.error('apexGridUtils: No se encontró la región IG con Static ID:', gridStaticId);
+                return false;
+            }
+            const grid = $ig.interactiveGrid('getViews', 'grid');
+            const model = grid && grid.model ? grid.model : null;
+            if (!model) {
+                console.error('apexGridUtils: No se pudo obtener el modelo del IG:', gridStaticId);
+                return false;
+            }
+
+            let processed = 0;
+            let skipped = 0;
+
+            model.forEach(function(record, index, id) {
+                try {
+                    // Omitir registros marcados para eliminación
+                    if (isRecordMarkedForDeletion(record, model)) {
+                        skipped++; return;
+                    }
+                    if (onlyEditable && model.allowEdit && !model.allowEdit(record)) {
+                        skipped++; return;
+                    }
+
+                    // Obtener valor final: fijo o fórmula
+                    let rawValue = (typeof valueOrFormula === 'function')
+                        ? valueOrFormula(record, index, model)
+                        : valueOrFormula;
+
+                    // Formateo opcional con decimales si es número
+                    if (rawValue !== null && rawValue !== undefined && typeof rawValue === 'number' && decimalPlaces !== null) {
+                        try { rawValue = parseFloat(Number(rawValue).toFixed(decimalPlaces)); } catch(e) { /* noop */ }
+                    }
+
+                    // Convertir a string para garantizar persistencia en IG
+                    let stringValue = (rawValue === null || rawValue === undefined) ? '' : String(rawValue);
+
+                    // Seteo dummy (null) y luego el valor string para que APEX detecte y guarde
+                    try { model.setValue(record, targetColumn, null); } catch(e) { /* noop */ }
+                    model.setValue(record, targetColumn, stringValue);
+
+                    if (doCommit) {
+                        try { if (model.markDirty) { model.markDirty(record); } } catch(e) { /* noop */ }
+                        try { if (model.commitRecord) { model.commitRecord(record); } } catch(e) { /* noop */ }
+                    }
+
+                    processed++;
+                } catch (rowErr) {
+                    console.warn('apexGridUtils: Error en setAllRowsValue para registro', id, rowErr);
+                    skipped++;
+                }
+            });
+
+            if (doRefresh) {
+                try { if (grid.view$ && grid.view$.trigger) { grid.view$.trigger('refresh'); } } catch(e) { /* noop */ }
+            }
+
+            console.log(`apexGridUtils: setAllRowsValue completado. Procesados=${processed}, Omitidos=${skipped}`);
+            return true;
+
+        } catch (error) {
+            console.error('apexGridUtils setAllRowsValue error:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Versión corta: setea un valor fijo en todas las filas de una columna
+     * @param {string} gridStaticId
+     * @param {string} targetColumn
+     * @param {any} value
+     * @param {object} options - mismas opciones que setAllRowsValue (opcional)
+     */
+    function setAllRowsFixed(gridStaticId, targetColumn, value, options) {
+        return setAllRowsValue(gridStaticId, targetColumn, value, options || {});
     }
 
     /**
